@@ -129,3 +129,14 @@ python3 -m unittest discover -s tests -v
 The suite uses temporary mock SDK packages and isolated home directories.
 It exercises real CMake configuration, setup's shell handoff, and the shell's
 SDK search path without requiring an installed CWhip compiler or user input.
+
+The bytecode package's installed-consumer conformance test uses the selected
+installed CWhip SDK. Configure and build first, then run:
+
+```sh
+ctest --test-dir build --output-on-failure
+```
+
+That test installs into a temporary prefix, copies the installed package to a
+separate CWhip consumer project, and checks the 183-byte container against an
+independent decoder and the normative section layouts.

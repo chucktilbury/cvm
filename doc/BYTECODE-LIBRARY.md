@@ -1,0 +1,81 @@
+# CVM bytecode library
+
+The installable CWhip package is named `cvm`, exports namespace `CVM`, and is
+versioned `1.0.0`. CMake installs it to
+`share/cwhip/modules/cvm/1.0.0/`. Consumers import it with `import cvm` and
+use the `CVM` namespace. The package contains no compiler/runtime private
+headers, native shims, or build-time dependency on the CVM source tree.
+
+## Public API
+
+- `CVM.Format` publishes v1 header, directory, section, and fixed-record
+  sizes/identifiers.
+- `CVM.Opcode` publishes the complete opcode-number set, validity and operand
+  width/kind queries, mnemonic names, and human-readable operand schemas.
+- `CVM.ByteReader` reads u8/u16/u32/i32 values in little-endian order from a
+  CWhip `buffer`. Reads past the input set `TRUNCATED` and preserve the first
+  failing byte offset. `seek`, `offset`, `errorCode`, and `errorOffset`
+  expose the reader state.
+- `CVM.ByteWriter` writes range-checked u8/u16/u32/i32 values. An invalid
+  value sets `RANGE_ERROR`; subsequent writes fail without changing the
+  output. Use `bytes()` to obtain the current buffer.
+- `CVM.InstructionBuilder` emits every v1 opcode using the canonical operand
+  width and range rules. `emitNoOperand` rejects instructions that require an
+  operand; `emit` rejects unknown opcodes and out-of-range operands.
+- `CVM.ContainerBuilder` creates the required seven sections, accepts checked
+  function/global/array records, and serializes the v1 header and directory.
+  `addFunction` consumes already encoded code and parameter/local type bytes;
+  the instruction builder can be used to produce the code. `addArray` accepts
+  either an initializer buffer of the exact element width or an empty buffer
+  for zero-initialized storage. `encode` returns `CVM.BuildResult` and rejects
+  invalid or oversized containers. `setDebug` adds the optional DEBUG table;
+  `addOptionalSection` adds unknown optional records (including IDs below the
+  known required sections) and emits them in ascending directory order.
+- `CVM.ContainerValidator.validate(buffer)` returns
+  `CVM.ValidationResult`; callers inspect `valid`, `code`, `section`, `offset`,
+  and `message` rather than parsing a display string.
+- `CVM.ContainerDecoder.decode(buffer)` validates and exposes the entry
+  function, directory counts, per-section count units, and copied raw section
+  buffers through `CVM.ContainerDecodeResult`. Unknown optional sections are
+  retained as raw section data; callers can preserve their bytes and counts
+  when transforming containers.
+
+The initial validator checks the magic, supported version, fixed header and
+reserved fields, directory order/flags, required sections, exact record and
+byte counts, tightly packed section extents, exact file size, entry index,
+function code extents, function names, instruction opcodes and operand
+truncation, local/global/array/function/service indexes, in-function branch
+targets, and instruction-boundary branch targets. All indexes and extents
+are checked before slicing or indexed reads.
+
+This is **structural validation only**, not a verifier or security boundary.
+It does not yet check global/array record contents and initializers, all string
+references, DEBUG records, UTF-8 validity, data/type range overlap,
+array ownership, call signatures, stack/type dataflow or joins, reachable
+fallthrough, return correctness, maximum stack declarations, or runtime
+behavior. The library does not execute bytecode. Do not treat a structurally
+accepted file as safe to execute. Those checks belong to later validator and
+interpreter milestones.
+
+## Byte I/O boundary
+
+The codec operates on CWhip `buffer` objects and is independent of file access.
+The installed SDK exposes raw byte writes to standard streams, but its public
+`System.File.read` and `write` interfaces use `String`; no public byte-oriented
+file read/write API is currently provided. The conformance test round-trips all
+256 byte values, including NUL and invalid UTF-8, through buffers and the
+public `writeBytes` stream API. It intentionally does not test file I/O by
+converting binary data through text. A future host-file adapter needs a
+separate public SDK byte-file API with explicit short-read/write and error
+semantics.
+
+## Specification erratum
+
+The normative header table requires `section_count >= 7`, and the minimal
+container has seven directory entries. However, the 32-byte header hex block
+in section 2.3 of [the specification](BYTECODE-ASSEMBLY.md#23-numeric-golden-example)
+contains `00 00` at header offsets 12-13. That value is the section count and
+contradicts the table. The library and conformance test use `07 00` there,
+following the normative table and the seven actual directory entries. All
+remaining bytes of the 183-byte minimal example match the published values.
+The specification's source block has not been silently changed.

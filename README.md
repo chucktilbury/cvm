@@ -1,14 +1,23 @@
 # CVM: CWhip Virtual Machine
 
-CVM is a proposed portable stack virtual machine and assembler implemented in
-CWhip. The bytecode format, instruction set, assembly syntax, and runtime
-boundary are described in the [proposed v1 specification](doc/BYTECODE-ASSEMBLY.md).
-That document is a design target, not a claim that the VM, assembler, shared
-bytecode library, or SmallC backend is implemented.
+CVM is a portable stack virtual machine project implemented in CWhip. Its
+approved v1 bytecode format and assembly syntax are described in the
+[specification](doc/BYTECODE-ASSEMBLY.md).
 
-This repository currently retains the CWhip project starter build shell. Its
-`src/main.cw` hello-world is still a template sample; CMake builds it into the
-project's `bin/` directory. It is not the VM or assembler.
+The first implementation milestone is the versioned `cvm` shared bytecode
+package (`CVM`, version `1.0.0`). It provides canonical v1 format/opcode
+definitions, checked byte readers and writers, instruction and container
+builders, and structural validation. The package is installed under
+`share/cwhip/modules/cvm/1.0.0` for import by other CWhip applications.
+
+This milestone does **not** implement the assembler, interpreter, runtime
+services, or SmallC backend. Validation checks the container structure,
+function extents, instruction encoding, table indexes, and branch boundaries;
+it does not claim control-flow, stack/type, return, or execution safety. The
+full boundary and public APIs are documented in
+[the bytecode library guide](doc/BYTECODE-LIBRARY.md).
+
+The template `src/main.cw` hello-world remains as a build-shell example.
 
 ## Get started
 
@@ -34,4 +43,4 @@ The default build type is `debug`. Choose `release` or `profile` with
 See [Building](doc/BUILDING.md) for SDK selection and output-directory
 customization, and [Project shell](doc/PROJECT-SHELL.md) for the shell
 environment and available commands. See the [changelog](doc/CHANGELOG.md) for
-starter-shell history.
+implementation history.
