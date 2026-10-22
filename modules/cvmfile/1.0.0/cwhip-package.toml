@@ -1,0 +1,8 @@
+[package]
+name = "cvmfile"
+version = "1.0.0"
+source = "cvmfile.cw"
+export = "namespace:CVMFile"
+
+[dependencies]
+system = "=0.1.0"

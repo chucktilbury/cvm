@@ -3,7 +3,18 @@
 This starter consumes the installed CWhip SDK; it does not build or download
 the compiler or SDK for you. Use the complete SDK installation prefix, not
 just its `bin/` directory. CMake requires SDK version `0.0.1` and an
-installation that supports configurable application output directories.
+installation that supports configurable application output directories and
+the public binary `File.readBytes`, `readAllBytes`, and `writeBytes` APIs.
+The latter API addition is Cwhip PR #20; SDK version `0.0.1` alone does not
+distinguish old installations. Configuration checks the public API and fails
+clearly for older SDKs. No SDK is built, downloaded or overwritten by CVM.
+
+An installed cparsegen supporting `--library` is also required at build time.
+Put its executable on `PATH` or pass
+`-DCPARSEGEN_EXECUTABLE=/absolute/path/to/cparsegen` to CMake. It generates
+CWhip from the CVM-owned `grammar/assembly.cpg` in `build/assembler/`.
+No cparsegen source checkout is required or used by CVM, and the installed
+assembler needs neither the generator nor its grammar at runtime.
 
 ## Select an SDK
 
@@ -83,6 +94,7 @@ Build and run the example from the project shell:
 ```sh
 cmake --build .
 ../bin/hello
+../bin/cvm-as ../tests/fixtures/minimal.asm -o minimal.cvm
 ```
 
 The Cwhip application helper writes generated sources and package metadata
@@ -107,6 +119,23 @@ cmake --build build
 The starter Cwhip executable follows `CWHIP_BIN_DIR`. Generated output
 directories are ignored by Git.
 
+The assembler follows the same output variable. Its explicit compile rule
+isolates HOME/XDG settings and selects the installed SDK resources plus
+the CVM-owned package root, without copying CVM packages into the SDK.
+For a noninteractive configure/build/install:
+
+```sh
+export CWHIP_SDK=/path/to/binary-io-sdk
+cmake -S . -B build \
+  -DCPARSEGEN_EXECUTABLE=/path/to/bin/cparsegen -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 2
+cmake --install build --prefix "$PWD/build/install"
+build/install/bin/cvm-as tests/fixtures/minimal.asm -o build/minimal.cvm
+```
+
+Install includes `bin/cvm-as`, the template `bin/hello`, and versioned
+`cvm`/`cvmfile` modules under `share/cwhip/modules`.
+
 ## Clean
 
 Use CMake's normal clean target to remove generated build artifacts:
@@ -126,11 +155,12 @@ C compiler:
 python3 -m unittest discover -s tests -v
 ```
 
-The suite uses temporary mock SDK packages and isolated home directories.
+The discovery suite uses temporary mock SDK packages, a mock build-time
+generator and isolated home directories.
 It exercises real CMake configuration, setup's shell handoff, and the shell's
 SDK search path without requiring an installed CWhip compiler or user input.
 
-The bytecode package's installed-consumer conformance test uses the selected
+The bytecode and assembler installed-consumer conformance tests use the selected
 installed CWhip SDK. Configure and build first, then run:
 
 ```sh
@@ -140,3 +170,8 @@ ctest --test-dir build --output-on-failure
 That test installs into a temporary prefix, copies the installed package to a
 separate CWhip consumer project, and checks the 183-byte container against an
 independent decoder and the normative section layouts.
+The assembler suite also runs the installed tool away from the checkout with
+no cparsegen/SDK runtime environment; checks complete approved-example
+goldens and every opcode/service; and reloads accepted output using the
+public byte-file adapter and structural validator. See [Assembler](ASSEMBLER.md)
+for supported syntax and remaining verification limits.

@@ -46,6 +46,15 @@ start {
         if (!opcodeSchema.isValid(opcodeNumber) || opcodeSchema.mnemonic(opcodeNumber).length == 0 || opcodeSchema.operandSchema(opcodeNumber).length == 0 || opcodeSchema.stackEffect(opcodeNumber).length == 0 || opcodeSchema.operation(opcodeNumber).length == 0) { Sys.Process().exit(21) }
         opcodeNumber = opcodeNumber + 1
     }
+    CVM.Service services = CVM.Service()
+    list arities = [1, 1, 3, 0, 1, 1, 4, 4, 1]
+    list results = [0, 0, 1, 1, 1, 1, 1, 1, 0]
+    int service = 0
+    while (service <= CVM.Service.FILE_CLOSE) {
+        if (services.name(service).length == 0 || services.parameterCount(service) != (arities[service] as int) || services.resultCount(service) != (results[service] as int)) { Sys.Process().exit(25) }
+        service = service + 1
+    }
+    if (!services.name(-1).equals("") || !services.name(9).equals("") || services.parameterCount(9) != -1 || services.resultCount(-1) != -1) { Sys.Process().exit(26) }
 
     buffer allBytes = buffer[]
     int byteValue = 0

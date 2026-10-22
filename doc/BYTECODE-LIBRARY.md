@@ -12,6 +12,8 @@ headers, native shims, or build-time dependency on the CVM source tree.
   sizes/identifiers.
 - `CVM.Opcode` publishes the complete opcode-number set, validity and operand
   width/kind queries, mnemonic names, and human-readable operand schemas.
+- `CVM.Service` publishes the v1 service IDs, assembly names and parameter/
+  result counts. These are metadata, not implemented runtime services.
 - `CVM.ByteReader` reads u8/u16/u32/i32 values in little-endian order from a
   CWhip `buffer`. Reads past the input set `TRUNCATED` and preserve the first
   failing byte offset. `seek`, `offset`, `errorCode`, and `errorOffset`
@@ -60,14 +62,14 @@ interpreter milestones.
 ## Byte I/O boundary
 
 The codec operates on CWhip `buffer` objects and is independent of file access.
-The installed SDK exposes raw byte writes to standard streams, but its public
-`System.File.read` and `write` interfaces use `String`; no public byte-oriented
-file read/write API is currently provided. The conformance test round-trips all
-256 byte values, including NUL and invalid UTF-8, through buffers and the
-public `writeBytes` stream API. It intentionally does not test file I/O by
-converting binary data through text. A future host-file adapter needs a
-separate public SDK byte-file API with explicit short-read/write and error
-semantics.
+The separate installable `cvmfile` 1.0.0 package provides `CVMFile.Files.read`
+and `write` over the public SDK's `File.readBytes` and `writeBytes` APIs.
+It handles partial transfers, SDK errors, EOF and explicit resource cleanup
+without converting binary data through String. It requires the SDK binary
+File API addition (Cwhip PR #20 or newer); the pure `cvm` package does not.
+See [the assembler/adapter guide](ASSEMBLER.md#reusable-binary-file-adapter)
+for the result API and failure policy. Installed-consumer tests reload actual
+assembler output and preserve all 256 byte values through files.
 
 ## Specification golden
 

@@ -78,11 +78,79 @@ get_target_property(hello_executable hello CWHIP_EXECUTABLE)
 install(PROGRAMS "${hello_executable}" DESTINATION bin)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/modules/cvm/"
     DESTINATION share/cwhip/modules/cvm)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/modules/cvmfile/"
+    DESTINATION share/cwhip/modules/cvmfile)
+
+find_program(CPARSEGEN_EXECUTABLE NAMES cparsegen
+    DOC "Installed cparsegen executable supporting --library")
+if(NOT CPARSEGEN_EXECUTABLE OR NOT EXISTS "${CPARSEGEN_EXECUTABLE}")
+    message(FATAL_ERROR
+        "CVM assembler requires installed cparsegen. Put it on PATH or set "
+        "-DCPARSEGEN_EXECUTABLE=/absolute/path/to/cparsegen (build-time only).")
+endif()
+set(cvm_system_source "${Cwhip_MODULE_DIR}/system/0.1.0/system.cw")
+if(NOT EXISTS "${cvm_system_source}")
+    message(FATAL_ERROR "CVM assembler requires public SDK system/0.1.0 with binary File APIs")
+endif()
+file(READ "${cvm_system_source}" cvm_system_api)
+foreach(method "buffer readBytes\\(int size\\)" "buffer readAllBytes\\(\\)" "int writeBytes\\(buffer data\\)")
+    if(NOT cvm_system_api MATCHES "${method}")
+        message(FATAL_ERROR
+            "Selected SDK lacks public File binary APIs (Cwhip PR #20 or newer required)")
+    endif()
+endforeach()
+
+set(assembler_work "${PROJECT_BINARY_DIR}/assembler")
+set(assembler_binary "${CWHIP_BIN_DIR}/cvm-as")
+get_filename_component(assembler_runtime_directory "${Cwhip_RUNTIME_LIBRARY}" DIRECTORY)
+file(MAKE_DIRECTORY "${assembler_work}" "${assembler_work}/home"
+    "${assembler_work}/config" "${assembler_work}/data"
+    "${assembler_work}/cache" "${assembler_work}/state")
+file(GLOB assembler_sources CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/src/assembler/*.cw")
+file(GLOB_RECURSE cvm_modules CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/modules/*")
+set(assembler_sdk_inputs)
+foreach(sdk_directory IN ITEMS "${Cwhip_MODULE_DIR}" "${Cwhip_BUILTIN_DIR}" "${Cwhip_INCLUDE_DIR}")
+    if(NOT sdk_directory STREQUAL "")
+        file(GLOB_RECURSE sdk_inputs CONFIGURE_DEPENDS "${sdk_directory}/*")
+        list(APPEND assembler_sdk_inputs ${sdk_inputs})
+    endif()
+endforeach()
+add_custom_command(OUTPUT "${assembler_work}/parser.cw"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${assembler_work}/parser.cw"
+    COMMAND "${CPARSEGEN_EXECUTABLE}" --library
+        "${PROJECT_SOURCE_DIR}/grammar/assembly.cpg" "${assembler_work}/parser.cw"
+    DEPENDS "${PROJECT_SOURCE_DIR}/grammar/assembly.cpg" "${CPARSEGEN_EXECUTABLE}"
+    VERBATIM)
+add_custom_command(OUTPUT "${assembler_binary}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CWHIP_BIN_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${assembler_sources} "${assembler_work}"
+    COMMAND "${CMAKE_COMMAND}" -E env
+        --unset=CWHIP_MODULE_DIR --unset=CWHIP_PACKAGE_PATH --unset=CWHIP_MODULE_REGISTRY
+        --unset=DESTDIR --unset=XDG_RUNTIME_DIR
+        "HOME=${assembler_work}/home" "XDG_CONFIG_HOME=${assembler_work}/config"
+        "XDG_DATA_HOME=${assembler_work}/data" "XDG_CACHE_HOME=${assembler_work}/cache"
+        "XDG_STATE_HOME=${assembler_work}/state" "CWHIP_HOME=${Cwhip_PREFIX}"
+        "CWHIP_SDK=${Cwhip_PREFIX}" "CWHIP_INCLUDE_DIR=${Cwhip_INCLUDE_DIR}"
+        "CWHIP_RUNTIME_DIR=${assembler_runtime_directory}"
+        "CWHIP_BUILTIN_DIR=${Cwhip_BUILTIN_DIR}"
+        "CWHIP_STDLIB_MODULE_DIR=${Cwhip_MODULE_DIR}" "CC=${Cwhip_CLANG_EXECUTABLE}"
+        "${Cwhip_COMPILER}" "${assembler_work}/assembler.cw"
+        -M "${PROJECT_SOURCE_DIR}/modules" -o "${assembler_binary}"
+    DEPENDS ${assembler_sources} ${cvm_modules} ${assembler_sdk_inputs}
+        "${assembler_work}/parser.cw" "${Cwhip_COMPILER}" "${Cwhip_RUNTIME_LIBRARY}"
+    WORKING_DIRECTORY "${assembler_work}"
+    COMMAND_EXPAND_LISTS VERBATIM)
+add_custom_target(cvm-as ALL DEPENDS "${assembler_binary}")
+install(PROGRAMS "${assembler_binary}" DESTINATION bin)
 
 if(BUILD_TESTING)
     find_program(Python3_EXECUTABLE NAMES python3 REQUIRED)
     add_test(NAME cvm_installed_library
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_cvm_library.py")
     set_tests_properties(cvm_installed_library PROPERTIES
+        ENVIRONMENT "CWHIP_SDK=${Cwhip_PREFIX};CVM_BUILD_DIR=${PROJECT_BINARY_DIR}")
+    add_test(NAME cvm_assembler
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_assembler.py")
+    set_tests_properties(cvm_assembler PROPERTIES
         ENVIRONMENT "CWHIP_SDK=${Cwhip_PREFIX};CVM_BUILD_DIR=${PROJECT_BINARY_DIR}")
 endif()

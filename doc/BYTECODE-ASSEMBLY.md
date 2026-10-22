@@ -1,9 +1,12 @@
 # CVM bytecode and assembly specification
 
-**Status: proposed v1 design.** This is an implementation target, not a
-description of features already implemented. The VM, assembler, shared
-bytecode library, binary host-I/O adapter, and SmallC binary backend remain
-future work. Numeric choices below are normative for this proposal.
+**Status: approved v1 design, partially implemented.** Numeric choices below
+are normative. The shared bytecode library, standalone assembler and binary
+file adapter are implemented; see [library](BYTECODE-LIBRARY.md) and
+[assembler](ASSEMBLER.md) guides for their exact supported boundaries.
+The interpreter, full semantic verifier, disassembler and SmallC binary
+backend remain future work. Execution requirements below are not claims
+that these components exist.
 
 ## 1. Project boundaries and ownership
 
@@ -205,8 +208,8 @@ are:
 CODE starts at `0x90` (144); FUNCS at `0x96`. Its function record names
 `main` at STRINGS offset 0, points to CODE offset 0 length 6, has no
 parameters or locals, maximum stack 1, and return type 1. Empty sections
-share offset `0xb2` (178), followed by STRINGS. This is a proposed golden,
-not evidence of an existing encoder.
+share offset `0xb2` (178), followed by STRINGS. The library and assembler conformance tests check the
+complete 183-byte golden independently.
 
 ## 3. Guest values and execution
 
@@ -496,14 +499,13 @@ global byte arrays. It does not silently add array parameters to SmallC.
 buffer only until the service returns. Guest functions may exchange scalar
 and file-handle values, but cannot return/retain ArrayRefs.
 
-**SDK prerequisite, not an existing capability claim:** the starter docs
-establish that `Sys.File` uses Strings and that `StdIO` supports buffer
-writes. They do not establish public binary file-read/write operations or
-their signatures/short-I/O behavior. Before implementing this adapter,
-confirm public SDK byte-oriented file read/write and stdin-byte interfaces,
-plus the buffer-write contract. Until then binary host I/O is an explicit
-integration prerequisite. Do not route arbitrary bytes through UTF-8 text,
-CWhip Strings, or a private ABI.
+**Implemented file boundary:** the public SDK now provides
+`File.readBytes(int)`, `readAllBytes()` and `writeBytes(buffer)` (Cwhip PR #20).
+The CVM-owned `cvmfile` package handles EOF, partial transfers, `lastError()`
+and explicit close through those APIs. See [the adapter contract](ASSEMBLER.md).
+Guest stdin/file services remain interpreter work, including confirmation of
+the stdin-byte interface. Arbitrary binary payloads must never pass through
+UTF-8 text, CWhip Strings, or a private ABI.
 
 ## 7. Validation, failures, and host policy
 
@@ -535,7 +537,8 @@ Library callers receive a structured failure, not a display string to parse.
 
 ## 8. Implementation and acceptance stages
 
-These are future gates, not claims of completed work:
+These are staged acceptance gates; completed subsets are described in the
+implementation guides, not implied by the complete execution design:
 
 1. **Shared library:** bytewise reader/writer, builder, canonical instruction
    schemas, and validator; publish/install from CVM and consume without
@@ -544,8 +547,9 @@ These are future gates, not claims of completed work:
    arrays, calls, branches, and DEBUG with an independent decoder. Compare
    exact bytes across architectures.
 3. **Assembler:** CVM-owned grammar, generated with the separately
-   installed cparsegen during build; test forward fixups, diagnostics,
-   canonical disassembly, and semantic round trips.
+   installed cparsegen during build; forward fixups, located diagnostics,
+   file reload, structural validation and exact bytes are implemented.
+   Canonical disassembly and semantic execution round trips remain later work.
 4. **Interpreter:** per-opcode success/trap tests, calls, joins, result/error
    separation, and host-configurable limits.
 5. **Host adapter:** confirm public SDK byte I/O; test EOF, errors, short
