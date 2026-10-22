@@ -185,7 +185,7 @@ directory records (112 bytes), 6 code bytes, one 28-byte function record,
 and 5 STRINGS bytes (`main\0`): 183 (`0xb7`) total. The header bytes are:
 
 ```text
-43 56 4d 00  01 00 00 00  20 00 00 00  00 00 00 00
+43 56 4d 00  01 00 00 00  20 00 00 00  07 00 00 00
 00 00 00 00  20 00 00 00  b7 00 00 00  00 00 00 00
 ```
 

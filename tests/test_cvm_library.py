@@ -69,6 +69,15 @@ def decode_golden(data):
 
 class CvmLibraryTests(unittest.TestCase):
     def test_installed_package_consumer_and_golden(self):
+        spec = (ROOT / "doc/BYTECODE-ASSEMBLY.md").read_text()
+        golden_section = spec.split("### 2.3 Numeric golden example", 1)[1].split(
+            "\n### ", 1
+        )[0]
+        published_header = bytes.fromhex(
+            golden_section.split("```text\n", 1)[1].split("\n```", 1)[0]
+        )
+        self.assertEqual(published_header, GOLDEN[:32])
+
         sdk = os.environ.get("CWHIP_SDK")
         if not sdk:
             self.skipTest("CWHIP_SDK must identify the installed Cwhip SDK")

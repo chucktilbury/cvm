@@ -69,13 +69,11 @@ converting binary data through text. A future host-file adapter needs a
 separate public SDK byte-file API with explicit short-read/write and error
 semantics.
 
-## Specification erratum
+## Specification golden
 
-The normative header table requires `section_count >= 7`, and the minimal
-container has seven directory entries. However, the 32-byte header hex block
-in section 2.3 of [the specification](BYTECODE-ASSEMBLY.md#23-numeric-golden-example)
-contains `00 00` at header offsets 12-13. That value is the section count and
-contradicts the table. The library and conformance test use `07 00` there,
-following the normative table and the seven actual directory entries. All
-remaining bytes of the 183-byte minimal example match the published values.
-The specification's source block has not been silently changed.
+The 32-byte header in section 2.3 of
+[the specification](BYTECODE-ASSEMBLY.md#23-numeric-golden-example) encodes
+`07 00` at header offsets 12-13, matching the normative minimum section count
+and the seven directory entries in the 183-byte minimal container. The
+conformance test checks this exact header and verifies the complete container
+with an independent decoder.
