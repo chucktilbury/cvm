@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 project(cvm LANGUAGES C)
+include(CTest)
 
 set(CWHIP_BIN_DIR "${PROJECT_SOURCE_DIR}/bin" CACHE PATH
     "Directory for project executables")
@@ -75,3 +76,13 @@ cwhip_add_program(hello
     OUTPUT_DIRECTORY "${CWHIP_BIN_DIR}")
 get_target_property(hello_executable hello CWHIP_EXECUTABLE)
 install(PROGRAMS "${hello_executable}" DESTINATION bin)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/modules/cvm/"
+    DESTINATION share/cwhip/modules/cvm)
+
+if(BUILD_TESTING)
+    find_program(Python3_EXECUTABLE NAMES python3 REQUIRED)
+    add_test(NAME cvm_installed_library
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_cvm_library.py")
+    set_tests_properties(cvm_installed_library PROPERTIES
+        ENVIRONMENT "CWHIP_SDK=${Cwhip_PREFIX};CVM_BUILD_DIR=${PROJECT_BINARY_DIR}")
+endif()

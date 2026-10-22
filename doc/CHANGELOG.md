@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add the installable CWhip `cvm` 1.0.0 bytecode package with canonical v1
+  format/opcode schemas, checked byte readers/writers and instruction/container
+  builders, plus initial structural validation and installed-consumer tests.
+- Follow the normative header table for the minimal golden's section count.
+  The published header byte block currently says zero despite requiring seven;
+  see [the bytecode library guide](BYTECODE-LIBRARY.md#specification-erratum).
 - Separate SDK selection into `cwhip/sdk.toml` so editor/debugger preference
   rewrites cannot erase it. Read legacy `settings.toml` only when the dedicated
   file is absent, consistently in CMake and setup. Keep environment overrides,

@@ -1,0 +1,5 @@
+[package]
+name = "cvm"
+version = "1.0.0"
+source = "cvm.cw"
+export = "namespace:CVM"
