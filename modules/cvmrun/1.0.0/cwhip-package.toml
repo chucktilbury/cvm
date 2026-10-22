@@ -1,0 +1,8 @@
+[package]
+name = "cvmrun"
+version = "1.0.0"
+source = "cvmrun.cw"
+export = "namespace:CVMRun"
+
+[dependencies]
+cvm = "=1.0.0"

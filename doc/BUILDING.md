@@ -133,8 +133,10 @@ cmake --install build --prefix "$PWD/build/install"
 build/install/bin/cvm-as tests/fixtures/minimal.asm -o build/minimal.cvm
 ```
 
-Install includes `bin/cvm-as`, the template `bin/hello`, and versioned
-`cvm`/`cvmfile` modules under `share/cwhip/modules`.
+Install includes `bin/cvm-as`, `bin/cvm-run`, the template `bin/hello`, and
+versioned `cvm`, `cvmfile`, and `cvmrun` modules under
+`share/cwhip/modules`. The installed runner does not require cparsegen or the
+source tree at runtime.
 
 ## Clean
 

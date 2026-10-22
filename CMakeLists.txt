@@ -80,6 +80,8 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/modules/cvm/"
     DESTINATION share/cwhip/modules/cvm)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/modules/cvmfile/"
     DESTINATION share/cwhip/modules/cvmfile)
+install(DIRECTORY "${PROJECT_SOURCE_DIR}/modules/cvmrun/"
+    DESTINATION share/cwhip/modules/cvmrun)
 
 find_program(CPARSEGEN_EXECUTABLE NAMES cparsegen
     DOC "Installed cparsegen executable supporting --library")
@@ -143,6 +145,33 @@ add_custom_command(OUTPUT "${assembler_binary}"
 add_custom_target(cvm-as ALL DEPENDS "${assembler_binary}")
 install(PROGRAMS "${assembler_binary}" DESTINATION bin)
 
+set(runner_work "${PROJECT_BINARY_DIR}/runner")
+set(runner_binary "${CWHIP_BIN_DIR}/cvm-run")
+file(MAKE_DIRECTORY "${runner_work}" "${runner_work}/home"
+    "${runner_work}/config" "${runner_work}/data"
+    "${runner_work}/cache" "${runner_work}/state")
+file(GLOB_RECURSE runner_modules CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/modules/*")
+add_custom_command(OUTPUT "${runner_binary}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CWHIP_BIN_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E env
+        --unset=CWHIP_MODULE_DIR --unset=CWHIP_PACKAGE_PATH --unset=CWHIP_MODULE_REGISTRY
+        --unset=DESTDIR --unset=XDG_RUNTIME_DIR
+        "HOME=${runner_work}/home" "XDG_CONFIG_HOME=${runner_work}/config"
+        "XDG_DATA_HOME=${runner_work}/data" "XDG_CACHE_HOME=${runner_work}/cache"
+        "XDG_STATE_HOME=${runner_work}/state" "CWHIP_HOME=${Cwhip_PREFIX}"
+        "CWHIP_SDK=${Cwhip_PREFIX}" "CWHIP_INCLUDE_DIR=${Cwhip_INCLUDE_DIR}"
+        "CWHIP_RUNTIME_DIR=${assembler_runtime_directory}"
+        "CWHIP_BUILTIN_DIR=${Cwhip_BUILTIN_DIR}"
+        "CWHIP_STDLIB_MODULE_DIR=${Cwhip_MODULE_DIR}" "CC=${Cwhip_CLANG_EXECUTABLE}"
+        "${Cwhip_COMPILER}" "${PROJECT_SOURCE_DIR}/src/runner/main.cw"
+        -M "${PROJECT_SOURCE_DIR}/modules" -o "${runner_binary}"
+    DEPENDS "${PROJECT_SOURCE_DIR}/src/runner/main.cw" ${runner_modules}
+        ${assembler_sdk_inputs} "${Cwhip_COMPILER}" "${Cwhip_RUNTIME_LIBRARY}"
+    WORKING_DIRECTORY "${runner_work}"
+    VERBATIM)
+add_custom_target(cvm-run ALL DEPENDS "${runner_binary}")
+install(PROGRAMS "${runner_binary}" DESTINATION bin)
+
 if(BUILD_TESTING)
     find_program(Python3_EXECUTABLE NAMES python3 REQUIRED)
     add_test(NAME cvm_installed_library
@@ -152,5 +181,9 @@ if(BUILD_TESTING)
     add_test(NAME cvm_assembler
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_assembler.py")
     set_tests_properties(cvm_assembler PROPERTIES
+        ENVIRONMENT "CWHIP_SDK=${Cwhip_PREFIX};CVM_BUILD_DIR=${PROJECT_BINARY_DIR}")
+    add_test(NAME cvm_interpreter
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_runner.py")
+    set_tests_properties(cvm_interpreter PROPERTIES
         ENVIRONMENT "CWHIP_SDK=${Cwhip_PREFIX};CVM_BUILD_DIR=${PROJECT_BINARY_DIR}")
 endif()
