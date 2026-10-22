@@ -1,8 +1,14 @@
-# CWhip project template
+# CVM: CWhip Virtual Machine
 
-A small starter project for building CWhip applications against an installed
-CWhip SDK. The example program lives in `src/main.cw`; CMake builds it into the
-project's `bin/` directory.
+CVM is a proposed portable stack virtual machine and assembler implemented in
+CWhip. The bytecode format, instruction set, assembly syntax, and runtime
+boundary are described in the [proposed v1 specification](doc/BYTECODE-ASSEMBLY.md).
+That document is a design target, not a claim that the VM, assembler, shared
+bytecode library, or SmallC backend is implemented.
+
+This repository currently retains the CWhip project starter build shell. Its
+`src/main.cw` hello-world is still a template sample; CMake builds it into the
+project's `bin/` directory. It is not the VM or assembler.
 
 ## Get started
 
@@ -28,4 +34,4 @@ The default build type is `debug`. Choose `release` or `profile` with
 See [Building](doc/BUILDING.md) for SDK selection and output-directory
 customization, and [Project shell](doc/PROJECT-SHELL.md) for the shell
 environment and available commands. See the [changelog](doc/CHANGELOG.md) for
-template updates.
+starter-shell history.

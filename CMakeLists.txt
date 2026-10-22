@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(cwhip_template LANGUAGES C)
+project(cvm LANGUAGES C)
 
 set(CWHIP_BIN_DIR "${PROJECT_SOURCE_DIR}/bin" CACHE PATH
     "Directory for project executables")
