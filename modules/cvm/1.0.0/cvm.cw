@@ -171,6 +171,42 @@ namespace CVM {
         }
     }
 
+    class Service {
+        public:
+        enum {
+            STDOUT_I32 = 0, STDOUT_BYTE = 1, STDOUT_WRITE = 2,
+            STDIN_BYTE = 3, FILE_OPEN_READ = 4, FILE_OPEN_WRITE = 5,
+            FILE_READ = 6, FILE_WRITE = 7, FILE_CLOSE = 8
+        }
+
+        String name(int id) {
+            if (id == STDOUT_I32) { return "stdout_i32" }
+            if (id == STDOUT_BYTE) { return "stdout_byte" }
+            if (id == STDOUT_WRITE) { return "stdout_write" }
+            if (id == STDIN_BYTE) { return "stdin_byte" }
+            if (id == FILE_OPEN_READ) { return "file_open_read" }
+            if (id == FILE_OPEN_WRITE) { return "file_open_write" }
+            if (id == FILE_READ) { return "file_read" }
+            if (id == FILE_WRITE) { return "file_write" }
+            if (id == FILE_CLOSE) { return "file_close" }
+            return ""
+        }
+
+        int parameterCount(int id) {
+            if (id == STDOUT_WRITE) { return 3 }
+            if (id == FILE_READ || id == FILE_WRITE) { return 4 }
+            if (id == STDIN_BYTE) { return 0 }
+            if (id >= STDOUT_I32 && id <= FILE_CLOSE) { return 1 }
+            return -1
+        }
+
+        int resultCount(int id) {
+            if (id < STDOUT_I32 || id > FILE_CLOSE) { return -1 }
+            if (id == STDOUT_I32 || id == STDOUT_BYTE || id == FILE_CLOSE) { return 0 }
+            return 1
+        }
+    }
+
     class ByteWriter {
         private:
         buffer _bytes

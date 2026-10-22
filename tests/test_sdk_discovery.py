@@ -21,7 +21,7 @@ class SdkDiscoveryTests(unittest.TestCase):
         self.project.mkdir()
         for name in ("CMakeLists.txt", ".project_env"):
             shutil.copy2(ROOT / name, self.project / name)
-        for name in ("scripts", "src"):
+        for name in ("scripts", "src", "grammar", "modules"):
             shutil.copytree(ROOT / name, self.project / name)
         self.home = self.root / "home"
         self.home.mkdir()
@@ -45,6 +45,9 @@ class SdkDiscoveryTests(unittest.TestCase):
             '#!/bin/sh\nprintf "%s" "${CWHIP_SDK-}" > "$SHELL_RECORD"\n'
         )
         shell.chmod(0o755)
+        generator = tools / "cparsegen"
+        generator.write_text("#!/bin/sh\nexit 1\n")
+        generator.chmod(0o755)
         self.env["PATH"] = f"{tools}:{self.env['PATH']}"
         self.env["SHELL_RECORD"] = str(self.shell_record)
 
@@ -56,11 +59,17 @@ class SdkDiscoveryTests(unittest.TestCase):
             'get_filename_component(prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)\n'
             'file(WRITE "${CMAKE_BINARY_DIR}/selected-sdk.txt" "${prefix}")\n'
             'set(Cwhip_APPLICATION_OUTPUT_DIRECTORIES TRUE)\n'
+            'set(Cwhip_MODULE_DIR "${prefix}/share/cwhip/modules")\n'
             'function(cwhip_add_program name)\n'
             '    add_custom_target("${name}")\n'
             '    set_target_properties("${name}" PROPERTIES\n'
             '        CWHIP_EXECUTABLE "${CMAKE_BINARY_DIR}/hello")\n'
             'endfunction()\n'
+        )
+        system = prefix / "share/cwhip/modules/system/0.1.0"
+        system.mkdir(parents=True)
+        (system / "system.cw").write_text(
+            "buffer readBytes(int size)\nbuffer readAllBytes()\nint writeBytes(buffer data)\n"
         )
         (package / "CwhipConfigVersion.cmake").write_text(
             'set(PACKAGE_VERSION "0.0.1")\n'
@@ -391,6 +400,17 @@ class SdkDiscoveryTests(unittest.TestCase):
         self.run_configure()
         self.assert_selected(explicit)
 
+    def test_missing_generator_has_explicit_diagnostic(self):
+        output = self.run_configure(success=False, extra=(
+            "-DCPARSEGEN_EXECUTABLE=/nonexistent/cparsegen",
+        ))
+        self.assertIn("requires installed cparsegen", output)
+
+    def test_old_sdk_without_byte_file_methods_is_rejected(self):
+        api = self.fallback / "share/cwhip/modules/system/0.1.0/system.cw"
+        api.write_text("String readAll()\nint write(String data)\n")
+        self.assertIn("lacks public File binary APIs", self.run_configure(success=False))
+
     def test_setup_exports_settings_prefix_and_build_type(self):
         prefix = self.make_sdk('setup SDK "quotes" ')
         self.select(prefix)
@@ -404,7 +424,7 @@ class SdkDiscoveryTests(unittest.TestCase):
     def test_setup_real_shell_adds_dedicated_sdk_to_path(self):
         prefix = self.make_sdk('shell SDK with "quotes"')
         self.select_sdk(prefix)
-        self.env["PATH"] = os.environ["PATH"]
+        (self.root / "tools/bash").unlink()
         self.run_configure(
             setup=True,
             shell_input='printf "%s" "$PATH" > "$SHELL_RECORD"\nexit\n',

@@ -1,0 +1,25 @@
+# CVM v1 logical lines. File/function ordering is checked by the assembler.
+line : version | entry | global_decl | array_decl | function_decl
+     | local_decl | end_decl | label | instruction ;
+version : ".version" VERSION ;
+entry : ".entry" IDENT ;
+global_decl : ".global" IDENT ":" IDENT "=" value ;
+array_decl : ".array" IDENT ":" IDENT "[" INTEGER "]" ("=" initializer)? ;
+initializer : STRING | "{" (value ("," value)*)? "}" ;
+function_decl : ".func" IDENT "(" (parameter ("," parameter)*)? ")" "->" IDENT ;
+parameter : IDENT ":" IDENT ;
+local_decl : ".local" IDENT ":" IDENT ;
+end_decl : ".end" ;
+label : IDENT ":" ;
+instruction : IDENT (value ("," value)*)? ;
+value : INTEGER | CHAR | IDENT ;
+
+VERSION = "1.0"
+INTEGER = ("+" | "-")? ("0x" [0-9a-fA-F]+ | [0-9]+)
+IDENT = [A-Za-z_][A-Za-z0-9_.]*
+STRING = "\"" ([^"\\\r\n] | "\\" [^\r\n])* "\""
+CHAR = "'" ([^'\\\r\n] | "\\" [^\r\n])* "'"
+COMMENT = ";" [^\r\n]*
+SPACE = [ \t\r]+
+@skip COMMENT;
+@skip SPACE;
