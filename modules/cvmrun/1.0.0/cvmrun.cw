@@ -1,4 +1,6 @@
 import cvm as CVM
+import process as Proc
+import system as Sys
 
 namespace CVMRun {
     class Limits {
@@ -51,6 +53,38 @@ namespace CVMRun {
         int heapBytes() { return _heapBytes }
     }
 
+    class Capabilities {
+        private:
+        bool _stdin
+        bool _stdout
+        bool _files
+        int _maxOpenFiles
+
+        public:
+        enum { DEFAULT_MAX_OPEN_FILES = 64, MAX_OPEN_FILES = 4096 }
+
+        Capabilities() {
+            _stdin = true
+            _stdout = true
+            _files = true
+            _maxOpenFiles = DEFAULT_MAX_OPEN_FILES
+        }
+
+        Capabilities(bool stdinEnabled, bool stdoutEnabled, bool filesEnabled,
+                     int maxOpenFiles) {
+            _stdin = stdinEnabled
+            _stdout = stdoutEnabled
+            _files = filesEnabled
+            _maxOpenFiles = maxOpenFiles
+        }
+
+        bool valid() { return _maxOpenFiles >= 0 && _maxOpenFiles <= MAX_OPEN_FILES }
+        bool stdinEnabled() { return _stdin }
+        bool stdoutEnabled() { return _stdout }
+        bool filesEnabled() { return _files }
+        int maxOpenFiles() { return _maxOpenFiles }
+    }
+
     class ExecutionResult {
         private:
         int _category
@@ -70,7 +104,9 @@ namespace CVMRun {
             VALIDATION_ERROR = 2,
             RUNTIME_TRAP = 3,
             UNSUPPORTED_SERVICE = 4,
-            RESOURCE_LIMIT = 5
+            RESOURCE_LIMIT = 5,
+            IO_ERROR = 6,
+            CONFIGURATION_ERROR = 7
         }
 
         ExecutionResult(int category, int guestResult, String message,
@@ -212,6 +248,25 @@ namespace CVMRun {
         void kill() { _alive = false }
     }
 
+    class HostFile {
+        private:
+        int _id
+        Sys.File _file
+        bool _open
+
+        public:
+        HostFile(int id, Sys.File file) {
+            _id = id
+            _file = file
+            _open = true
+        }
+
+        int id() { return _id }
+        Sys.File file() { return _file }
+        bool open() { return _open }
+        void invalidate() { _open = false }
+    }
+
     class Frame {
         private:
         int _functionIndex
@@ -257,7 +312,12 @@ namespace CVMRun {
         buffer _types
         buffer _data
         Limits _limits
+        Capabilities _capabilities
         ExecutionResult _failure
+        list _fileHandles
+        Sys.File _stdinFile
+        bool _stdinOpen
+        int _nextFileHandle
         int _entry
         int _steps
         int _heapBytes
@@ -277,7 +337,12 @@ namespace CVMRun {
             _types = buffer[]
             _data = buffer[]
             _limits = limits
+            _capabilities = Capabilities()
             _failure = null
+            _fileHandles = []
+            _stdinFile = null
+            _stdinOpen = false
+            if (_nextFileHandle <= 0) { _nextFileHandle = 1 }
             _entry = -1
             _steps = 0
             _heapBytes = 0
@@ -777,6 +842,494 @@ namespace CVMRun {
             return true
         }
 
+        bool serviceAvailable(bool enabled, String serviceName) {
+            if (!enabled) {
+                trap(ExecutionResult.UNSUPPORTED_SERVICE,
+                    format("host capability for '{}' is disabled", serviceName))
+                return false
+            }
+            return true
+        }
+
+        int openResourceCount() {
+            int count = _fileHandles.length
+            if (_stdinOpen) { count = count + 1 }
+            return count
+        }
+
+        bool checkOpenResourceLimit() {
+            if (openResourceCount() >= _capabilities.maxOpenFiles()) {
+                trap(ExecutionResult.RESOURCE_LIMIT, "open file handle limit exceeded")
+                return false
+            }
+            return true
+        }
+
+        HostFile findFileHandle(int id) {
+            int index = 0
+            while (index < _fileHandles.length) {
+                HostFile hostFile = _fileHandles[index] as HostFile
+                if (hostFile != null && hostFile.open() && hostFile.id() == id) {
+                    return hostFile
+                }
+                index = index + 1
+            }
+            return null
+        }
+
+        void removeFileHandle(HostFile removed) {
+            int index = 0
+            while (index < _fileHandles.length) {
+                HostFile hostFile = _fileHandles[index] as HostFile
+                if (hostFile != null && hostFile.id() == removed.id()) {
+                    hostFile.invalidate()
+                    int last = _fileHandles.length - 1
+                    if (index != last) { _fileHandles[index] = _fileHandles[last] }
+                    _fileHandles.resize(last)
+                    return
+                }
+                index = index + 1
+            }
+            removed.invalidate()
+        }
+
+        bool closeFileHandle(HostFile hostFile, bool reportFailure) {
+            String error = ""
+            try {
+                hostFile.file().close()
+                error = Sys.System().lastError()
+            } except(Exception) as caught {
+                error = caught.message
+            }
+            removeFileHandle(hostFile)
+            if (!error.equals("")) {
+                if (reportFailure) {
+                    trap(ExecutionResult.IO_ERROR,
+                        format("closing file handle {}: {}", hostFile.id(), error))
+                } else {
+                    failAt(ExecutionResult.IO_ERROR,
+                        format("closing file handle {} during cleanup: {}", hostFile.id(), error),
+                        _entry, _activeOffset)
+                }
+                return false
+            }
+            return true
+        }
+
+        void closeOwnedResources() {
+            while (_fileHandles.length > 0) {
+                HostFile hostFile = _fileHandles[_fileHandles.length - 1] as HostFile
+                closeFileHandle(hostFile, false)
+            }
+            if (_stdinOpen) {
+                String error = ""
+                try {
+                    _stdinFile.close()
+                    error = Sys.System().lastError()
+                } except(Exception) as caught {
+                    error = caught.message
+                }
+                _stdinFile = null
+                _stdinOpen = false
+                if (!error.equals("") && _failure == null) {
+                    failAt(ExecutionResult.IO_ERROR,
+                        format("closing binary stdin during cleanup: {}", error),
+                        _entry, _activeOffset)
+                }
+            }
+        }
+
+        String decodePath(ArrayInstance instance) {
+            if (instance.elementType() != Value.U8) {
+                trap(ExecutionResult.RUNTIME_TRAP, "file path array must contain u8 elements")
+                return null
+            }
+            int cursor = 0
+            bool terminated = false
+            while (cursor < instance.length() && !terminated && _failure == null) {
+                int first = int(instance.bytes()[cursor])
+                if (first == 0) {
+                    terminated = true
+                } else {
+                    int width = 1
+                    if (first >= 194 && first <= 223) { width = 2 }
+                    else {
+                        if (first >= 224 && first <= 239) { width = 3 }
+                        else {
+                            if (first >= 240 && first <= 244) { width = 4 }
+                            else {
+                                if (first >= 128) {
+                                    trap(ExecutionResult.RUNTIME_TRAP,
+                                        "file path is not valid UTF-8")
+                                    return null
+                                }
+                            }
+                        }
+                    }
+                    if (width > instance.length() - cursor) {
+                        trap(ExecutionResult.RUNTIME_TRAP,
+                            "file path is not NUL-terminated valid UTF-8")
+                        return null
+                    }
+                    int continuationIndex = 1
+                    while (continuationIndex < width) {
+                        int next = int(instance.bytes()[cursor + continuationIndex])
+                        bool validContinuation = next >= 128 && next <= 191
+                        if (continuationIndex == 1) {
+                            if (first == 224 && next < 160) { validContinuation = false }
+                            if (first == 237 && next > 159) { validContinuation = false }
+                            if (first == 240 && next < 144) { validContinuation = false }
+                            if (first == 244 && next > 143) { validContinuation = false }
+                        }
+                        if (!validContinuation) {
+                            trap(ExecutionResult.RUNTIME_TRAP,
+                                "file path is not valid UTF-8")
+                            return null
+                        }
+                        continuationIndex = continuationIndex + 1
+                    }
+                    cursor = cursor + width
+                }
+            }
+            if (_failure != null) { return null }
+            if (!terminated) {
+                trap(ExecutionResult.RUNTIME_TRAP, "file path is not NUL-terminated")
+                return null
+            }
+            if (cursor == 0) {
+                trap(ExecutionResult.RUNTIME_TRAP, "file path cannot be empty")
+                return null
+            }
+            buffer encodedPath = buffer(cursor)
+            int index = 0
+            while (index < cursor) {
+                encodedPath[index] = instance.bytes()[index]
+                index = index + 1
+            }
+            try {
+                return Proc.Runtime().textDecode(encodedPath)
+            } except(Exception) as caught {
+                trap(ExecutionResult.RUNTIME_TRAP,
+                    format("unable to decode file path as UTF-8: {}", caught.message))
+                return null
+            }
+        }
+
+        bool checkByteArrayRange(ArrayInstance instance, int offset, int count,
+                                 bool allowZero, String operation) {
+            if (instance.elementType() != Value.U8) {
+                trap(ExecutionResult.RUNTIME_TRAP,
+                    format("{} buffer must contain u8 elements", operation))
+                return false
+            }
+            if (!allowZero && count == 0) {
+                trap(ExecutionResult.RUNTIME_TRAP,
+                    format("{} count must be positive", operation))
+                return false
+            }
+            if (offset < 0 || count < 0 ||
+                offset > instance.length() || count > instance.length() - offset) {
+                trap(ExecutionResult.RUNTIME_TRAP,
+                    format("{} offset/count is outside the byte array", operation))
+                return false
+            }
+            return true
+        }
+
+        bool checkIOError(String operation, String error) {
+            if (!error.equals("")) {
+                trap(ExecutionResult.IO_ERROR, format("{}: {}", operation, error))
+                return false
+            }
+            return true
+        }
+
+        bool canPushServiceResult() {
+            Frame frame = currentFrame()
+            FunctionInfo function = currentFunction()
+            if (frame == null || function == null) {
+                trap(ExecutionResult.RUNTIME_TRAP, "missing execution frame")
+                return false
+            }
+            if (_activeSlots + _stack.length >= _limits.stackValues()) {
+                trap(ExecutionResult.RESOURCE_LIMIT,
+                    "active local and operand value limit exceeded")
+                return false
+            }
+            if (_stack.length - frame.stackBase() >= function.maximumStack()) {
+                trap(ExecutionResult.RESOURCE_LIMIT,
+                    "function maximum stack declaration exceeded")
+                return false
+            }
+            return true
+        }
+
+        bool executeService(int service) {
+            CVM.Service schema = CVM.Service()
+            String serviceName = schema.name(service)
+            if (serviceName.equals("")) {
+                trap(ExecutionResult.RUNTIME_TRAP,
+                    format("invalid host service {}", service))
+                return false
+            }
+
+            if (service == CVM.Service.STDOUT_I32) {
+                Value value = popType(Value.I32)
+                if (value == null || _failure != null) { return false }
+                if (!serviceAvailable(_capabilities.stdoutEnabled(), serviceName)) { return false }
+                String text = format("{}", value.number())
+                Sys.StandardIO io = Sys.StandardIO()
+                int written = -1
+                String error = ""
+                try {
+                    written = io.write(text)
+                    error = Sys.System().lastError()
+                    if (error.equals("") && written == text.length) {
+                        io.flush()
+                        error = Sys.System().lastError()
+                    }
+                } except(Exception) as caught {
+                    error = caught.message
+                }
+                if (!checkIOError("writing stdout", error)) { return false }
+                if (written != text.length) {
+                    trap(ExecutionResult.IO_ERROR, "writing stdout made incomplete progress")
+                    return false
+                }
+                return true
+            }
+
+            if (service == CVM.Service.STDOUT_BYTE) {
+                Value value = popType(Value.U8)
+                if (value == null || _failure != null) { return false }
+                if (!serviceAvailable(_capabilities.stdoutEnabled(), serviceName)) { return false }
+                buffer bytes = buffer(1)
+                bytes[0] = value.number()
+                Sys.StandardIO io = Sys.StandardIO()
+                int written = -1
+                String error = ""
+                try {
+                    written = io.writeBytes(bytes)
+                    error = Sys.System().lastError()
+                    if (error.equals("") && written == 1) {
+                        io.flush()
+                        error = Sys.System().lastError()
+                    }
+                } except(Exception) as caught {
+                    error = caught.message
+                }
+                if (!checkIOError("writing stdout byte", error)) { return false }
+                if (written != 1) {
+                    trap(ExecutionResult.IO_ERROR, "writing stdout byte made incomplete progress")
+                    return false
+                }
+                return true
+            }
+
+            if (service == CVM.Service.STDOUT_WRITE) {
+                Value countValue = popType(Value.I32)
+                if (countValue == null || _failure != null) { return false }
+                Value offsetValue = popType(Value.I32)
+                if (offsetValue == null || _failure != null) { return false }
+                Value reference = popType(Value.ARRAY_REF)
+                if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
+                int offset = offsetValue.number()
+                int count = countValue.number()
+                ArrayInstance instance = reference.array()
+                if (!checkByteArrayRange(instance, offset, count, true, "stdout_write")) { return false }
+                if (!serviceAvailable(_capabilities.stdoutEnabled(), serviceName)) { return false }
+                if (!canPushServiceResult()) { return false }
+                if (count == 0) { return push(Value(Value.I32, 0, null, true)) }
+                buffer chunk = instance.bytes()[offset:offset + count]
+                Sys.StandardIO io = Sys.StandardIO()
+                int written = -1
+                String error = ""
+                try {
+                    written = io.writeBytes(chunk)
+                    error = Sys.System().lastError()
+                    if (error.equals("") && written > 0) {
+                        io.flush()
+                        error = Sys.System().lastError()
+                    }
+                } except(Exception) as caught {
+                    error = caught.message
+                }
+                if (!checkIOError("writing stdout bytes", error)) { return false }
+                if (written <= 0 || written > count) {
+                    trap(ExecutionResult.IO_ERROR, "stdout write made invalid progress")
+                    return false
+                }
+                return push(Value(Value.I32, written, null, true))
+            }
+
+            if (service == CVM.Service.STDIN_BYTE) {
+                if (!serviceAvailable(_capabilities.stdinEnabled(), serviceName)) { return false }
+                if (!canPushServiceResult()) { return false }
+                if (!_stdinOpen) {
+                    if (!checkOpenResourceLimit()) { return false }
+                    try {
+                        _stdinFile = Sys.File("/dev/stdin", "rb")
+                        _stdinOpen = true
+                    } except(Exception) as caught {
+                        trap(ExecutionResult.IO_ERROR,
+                            format("opening binary stdin: {}", caught.message))
+                        return false
+                    }
+                }
+                buffer byte = buffer[]
+                String error = ""
+                try {
+                    byte = _stdinFile.readBytes(1)
+                    error = Sys.System().lastError()
+                } except(Exception) as caught {
+                    error = caught.message
+                }
+                if (!checkIOError("reading stdin byte", error)) { return false }
+                if (byte == null || byte.length > 1) {
+                    trap(ExecutionResult.IO_ERROR, "stdin byte read returned invalid data")
+                    return false
+                }
+                if (byte.length == 1) {
+                    return push(Value(Value.I32, int(byte[0]), null, true))
+                }
+                bool atEnd = false
+                try {
+                    atEnd = _stdinFile.eof()
+                    error = Sys.System().lastError()
+                } except(Exception) as caught {
+                    error = caught.message
+                }
+                if (!checkIOError("checking stdin EOF", error)) { return false }
+                if (!atEnd) {
+                    trap(ExecutionResult.IO_ERROR, "stdin read made no progress before EOF")
+                    return false
+                }
+                return push(Value(Value.I32, -1, null, true))
+            }
+
+            if (service == CVM.Service.FILE_OPEN_READ ||
+                service == CVM.Service.FILE_OPEN_WRITE) {
+                Value reference = popType(Value.ARRAY_REF)
+                if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
+                String path = decodePath(reference.array())
+                if (path == null || _failure != null) { return false }
+                if (!serviceAvailable(_capabilities.filesEnabled(), serviceName)) { return false }
+                if (!checkOpenResourceLimit()) { return false }
+                if (!canPushServiceResult()) { return false }
+                if (_nextFileHandle > 2147483647) {
+                    trap(ExecutionResult.RESOURCE_LIMIT, "file handle identifier space exhausted")
+                    return false
+                }
+                Sys.File file = null
+                String mode = "rb"
+                if (service == CVM.Service.FILE_OPEN_WRITE) { mode = "wb" }
+                try {
+                    file = Sys.File(path, mode)
+                } except(Exception) as caught {
+                    trap(ExecutionResult.IO_ERROR,
+                        format("opening '{}': {}", path, caught.message))
+                    return false
+                }
+                int handleId = _nextFileHandle
+                _nextFileHandle = _nextFileHandle + 1
+                _fileHandles.append(HostFile(handleId, file))
+                return push(Value(Value.FILE, handleId, null, true))
+            }
+
+            if (service == CVM.Service.FILE_READ) {
+                Value capacityValue = popType(Value.I32)
+                if (capacityValue == null || _failure != null) { return false }
+                Value offsetValue = popType(Value.I32)
+                if (offsetValue == null || _failure != null) { return false }
+                Value reference = popType(Value.ARRAY_REF)
+                if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
+                Value fileValue = popType(Value.FILE)
+                if (fileValue == null || _failure != null) { return false }
+                int capacity = capacityValue.number()
+                ArrayInstance instance = reference.array()
+                if (!checkByteArrayRange(instance, offsetValue.number(), capacity, false, "file_read")) { return false }
+                HostFile hostFile = findFileHandle(fileValue.number())
+                if (hostFile == null) {
+                    trap(ExecutionResult.RUNTIME_TRAP,
+                        format("invalid, stale, or foreign file handle {}", fileValue.number()))
+                    return false
+                }
+                if (!canPushServiceResult()) { return false }
+                buffer bytes = buffer[]
+                String error = ""
+                try {
+                    bytes = hostFile.file().readBytes(capacity)
+                    error = Sys.System().lastError()
+                } except(Exception) as caught {
+                    error = caught.message
+                }
+                if (!checkIOError("reading file", error)) { return false }
+                if (bytes == null || bytes.length > capacity) {
+                    trap(ExecutionResult.IO_ERROR, "file read returned invalid byte count")
+                    return false
+                }
+                int index = 0
+                while (index < bytes.length) {
+                    instance.bytes()[offsetValue.number() + index] = bytes[index]
+                    index = index + 1
+                }
+                return push(Value(Value.I32, bytes.length, null, true))
+            }
+
+            if (service == CVM.Service.FILE_WRITE) {
+                Value countValue = popType(Value.I32)
+                if (countValue == null || _failure != null) { return false }
+                Value offsetValue = popType(Value.I32)
+                if (offsetValue == null || _failure != null) { return false }
+                Value reference = popType(Value.ARRAY_REF)
+                if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
+                Value fileValue = popType(Value.FILE)
+                if (fileValue == null || _failure != null) { return false }
+                int count = countValue.number()
+                ArrayInstance instance = reference.array()
+                if (!checkByteArrayRange(instance, offsetValue.number(), count, true, "file_write")) { return false }
+                HostFile hostFile = findFileHandle(fileValue.number())
+                if (hostFile == null) {
+                    trap(ExecutionResult.RUNTIME_TRAP,
+                        format("invalid, stale, or foreign file handle {}", fileValue.number()))
+                    return false
+                }
+                if (!canPushServiceResult()) { return false }
+                if (count == 0) { return push(Value(Value.I32, 0, null, true)) }
+                buffer chunk = instance.bytes()[offsetValue.number():offsetValue.number() + count]
+                int written = -1
+                String error = ""
+                try {
+                    written = hostFile.file().writeBytes(chunk)
+                    error = Sys.System().lastError()
+                } except(Exception) as caught {
+                    error = caught.message
+                }
+                if (!checkIOError("writing file", error)) { return false }
+                if (written <= 0 || written > count) {
+                    trap(ExecutionResult.IO_ERROR, "file write made invalid progress")
+                    return false
+                }
+                return push(Value(Value.I32, written, null, true))
+            }
+
+            if (service == CVM.Service.FILE_CLOSE) {
+                Value fileValue = popType(Value.FILE)
+                if (fileValue == null || _failure != null) { return false }
+                HostFile hostFile = findFileHandle(fileValue.number())
+                if (hostFile == null) {
+                    trap(ExecutionResult.RUNTIME_TRAP,
+                        format("invalid, stale, or foreign file handle {}", fileValue.number()))
+                    return false
+                }
+                return closeFileHandle(hostFile, true)
+            }
+
+            trap(ExecutionResult.RUNTIME_TRAP,
+                format("invalid host service {}", service))
+            return false
+        }
+
         void freeFrame(Frame frame) {
             list arrays = frame.localArrays()
             int index = 0
@@ -1089,11 +1642,7 @@ namespace CVMRun {
             if (opcode == CVM.Opcode.SYS) {
                 int service = readOperand(frame, function, 1)
                 if (_failure != null) { return false }
-                String name = CVM.Service().name(service)
-                if (name.equals("")) { name = format("service {}", service) }
-                trap(ExecutionResult.UNSUPPORTED_SERVICE,
-                    format("host service '{}' is not implemented by this runner", name))
-                return false
+                return executeService(service)
             }
             trap(ExecutionResult.RUNTIME_TRAP, format("unknown opcode {}", opcode))
             return false
@@ -1105,11 +1654,26 @@ namespace CVMRun {
         }
 
         ExecutionResult run(buffer program, Limits limits) {
+            return run(program, limits, Capabilities())
+        }
+
+        ExecutionResult run(buffer program, Capabilities capabilities) {
+            return run(program, Limits(), capabilities)
+        }
+
+        ExecutionResult run(buffer program, Limits limits, Capabilities capabilities) {
             reset(limits)
             if (limits == null || !limits.valid()) {
-                loadFailure(0, 0, "invalid VM limits")
+                _failure = ExecutionResult(ExecutionResult.CONFIGURATION_ERROR, 0,
+                    "invalid VM limits", 0, -1, -1, "", -1, _steps)
                 return _failure
             }
+            if (capabilities == null || !capabilities.valid()) {
+                _failure = ExecutionResult(ExecutionResult.CONFIGURATION_ERROR, 0,
+                    "invalid host capabilities", 0, -1, -1, "", -1, _steps)
+                return _failure
+            }
+            _capabilities = capabilities
             if (program == null) {
                 loadFailure(0, 0, "program buffer is null")
                 return _failure
@@ -1130,6 +1694,7 @@ namespace CVMRun {
                     trap(ExecutionResult.RUNTIME_TRAP, "instruction did not complete")
                 }
             }
+            closeOwnedResources()
             if (_failure != null) { return _failure }
             return ExecutionResult(ExecutionResult.SUCCESS, _guestResult, "",
                 0, -1, -1, "", -1, _steps)

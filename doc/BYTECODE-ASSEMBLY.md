@@ -1,12 +1,13 @@
 # CVM bytecode and assembly specification
 
 **Status: approved v1 design, partially implemented.** Numeric choices below
-are normative. The shared bytecode library, standalone assembler and binary
-file adapter are implemented; see [library](BYTECODE-LIBRARY.md) and
-[assembler](ASSEMBLER.md) guides for their exact supported boundaries.
-The interpreter, full semantic verifier, disassembler and SmallC binary
-backend remain future work. Execution requirements below are not claims
-that these components exist.
+are normative. The shared bytecode library, standalone assembler, interpreter
+including all v1 host services, and binary file adapter are implemented; see
+[library](BYTECODE-LIBRARY.md), [assembler](ASSEMBLER.md), and
+[interpreter](INTERPRETER.md) guides for their exact supported boundaries.
+The full semantic verifier, disassembler and SmallC binary backend remain
+future work. Execution requirements below are not claims that these
+components exist.
 
 ## 1. Project boundaries and ownership
 
@@ -499,13 +500,18 @@ global byte arrays. It does not silently add array parameters to SmallC.
 buffer only until the service returns. Guest functions may exchange scalar
 and file-handle values, but cannot return/retain ArrayRefs.
 
-**Implemented file boundary:** the public SDK now provides
-`File.readBytes(int)`, `readAllBytes()` and `writeBytes(buffer)` (Cwhip PR #20).
-The CVM-owned `cvmfile` package handles EOF, partial transfers, `lastError()`
-and explicit close through those APIs. See [the adapter contract](ASSEMBLER.md).
-Guest stdin/file services remain interpreter work, including confirmation of
-the stdin-byte interface. Arbitrary binary payloads must never pass through
-UTF-8 text, CWhip Strings, or a private ABI.
+**Implemented host boundary:** `cvmrun` uses public SDK byte-buffer and file
+APIs for binary file and console output. The public SDK does not expose a
+binary `StandardIO.readBytes` operation; `stdin_byte` therefore opens a
+separate `Sys.File("/dev/stdin", "rb")` through the public binary-file API.
+This follows the current POSIX host target and reports an I/O error if the
+path is unavailable. The opened file object is closed during VM cleanup; the
+process's borrowed standard input descriptor is not closed. Arbitrary binary
+payloads never pass through UTF-8 text or CWhip Strings. The CLI and in-memory
+API expose explicit capability configuration and open-file limits; these are
+host policy, not a filesystem containment mechanism or security sandbox. See
+[the adapter contract](ASSEMBLER.md) and
+[interpreter configuration](INTERPRETER.md).
 
 ## 7. Validation, failures, and host policy
 

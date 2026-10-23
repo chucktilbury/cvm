@@ -19,10 +19,11 @@ and `cvmrun` package execute validated containers with checked runtime
 semantics and configurable resource limits. See
 [Interpreter usage and scope](doc/INTERPRETER.md).
 
-The interpreter supports all non-service v1 instructions, but does not
-implement host services, a disassembler, or the SmallC backend. Structural
-validation and runtime checks are distinct; neither claims a security
-boundary. The full shared-library boundary and APIs are documented in
+The interpreter supports all v1 instructions and host services, with
+configurable console/filesystem capabilities and resource limits. A
+disassembler and the SmallC backend are not included. Structural validation
+and runtime checks are distinct; neither claims a security boundary. The full
+shared-library boundary and APIs are documented in
 [the bytecode library guide](doc/BYTECODE-LIBRARY.md).
 
 See [Assembler usage and contract](doc/ASSEMBLER.md). The template

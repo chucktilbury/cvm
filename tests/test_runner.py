@@ -67,10 +67,83 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(result.stderr, b"")
         return binary_path
 
-    def run_binary(self, binary_path, *arguments):
+    def run_binary(self, binary_path, *arguments, input=b""):
         return subprocess.run([str(self.runner), *arguments, str(binary_path)],
                               cwd=self.work, env=self.env, capture_output=True,
-                              timeout=30)
+                              input=input, timeout=30)
+
+    def byte_literal(self, payload):
+        return "".join(f"\\x{byte:02x}" for byte in payload)
+
+    def file_copy_program(self, source, destination, chunk_size=65536):
+        source = str(source)
+        destination = str(destination)
+        return f""".version 1.0
+.entry main
+.array source_path: u8[{len(source.encode()) + 1}] = "{source}"
+.array destination_path: u8[{len(destination.encode()) + 1}] = "{destination}"
+.func main() -> i32
+    .local reader: file
+    .local writer: file
+    .local read_count: i32
+    .local remaining: i32
+    .local position: i32
+    .local written: i32
+    .array transfer_buffer: u8[{chunk_size}]
+    array source_path
+    sys file_open_read
+    stloc reader
+    pop
+    array destination_path
+    sys file_open_write
+    stloc writer
+    pop
+read_loop:
+    ldloc reader
+    array transfer_buffer
+    const.i32 0
+    const.i32 {chunk_size}
+    sys file_read
+    stloc read_count
+    pop
+    ldloc read_count
+    jz finished
+    const.i32 0
+    stloc position
+    pop
+    ldloc read_count
+    stloc remaining
+    pop
+write_loop:
+    ldloc writer
+    array transfer_buffer
+    ldloc position
+    ldloc remaining
+    sys file_write
+    stloc written
+    pop
+    ldloc position
+    ldloc written
+    add.i32
+    stloc position
+    pop
+    ldloc remaining
+    ldloc written
+    sub.i32
+    stloc remaining
+    pop
+    ldloc remaining
+    jz read_loop
+    jmp write_loop
+finished:
+    ldloc reader
+    sys file_close
+    ldloc writer
+    sys file_close
+    const.i32 0
+    ret.i32
+.end
+"""
 
     def assert_result(self, source, value):
         binary = self.assemble(source)
@@ -499,8 +572,273 @@ done:
         self.assertEqual(result.returncode, 1)
         self.assertIn(b"array initializer is outside DATA", result.stderr)
 
-    def test_unsupported_services_are_explicit(self):
-        binary = self.assemble(""".version 1.0
+    def test_console_services_preserve_bytes_and_report_eof(self):
+        payload = bytes(range(256))
+        binary = self.assemble(f""".version 1.0
+.entry main
+.array bytes: u8[257] = "{self.byte_literal(payload)}"
+.func main() -> i32
+    array bytes
+    const.i32 0
+    const.i32 0
+    sys stdout_write
+    pop
+    const.i32 -2147483648
+    sys stdout_i32
+    const.u8 255
+    sys stdout_byte
+    array bytes
+    const.i32 0
+    const.i32 256
+    sys stdout_write
+    pop
+    const.i32 0
+    ret.i32
+.end
+""")
+        result = self.run_binary(binary)
+        self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+        self.assertEqual(result.stdout, b"-2147483648\xff" + payload + b"result: 0\n")
+        self.assertEqual(result.stderr, b"")
+
+        input_program = self.assemble(""".version 1.0
+.entry main
+.func main() -> i32
+    sys stdin_byte
+    sys stdout_i32
+    const.u8 32
+    sys stdout_byte
+    sys stdin_byte
+    sys stdout_i32
+    const.u8 32
+    sys stdout_byte
+    sys stdin_byte
+    sys stdout_i32
+    const.u8 32
+    sys stdout_byte
+    sys stdin_byte
+    sys stdout_i32
+    const.u8 32
+    sys stdout_byte
+    const.i32 0
+    ret.i32
+.end
+""")
+        result = self.run_binary(input_program, input=b"\x00\x80\xff")
+        self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+        self.assertEqual(result.stdout, b"0 128 255 -1 result: 0\n")
+        self.assertEqual(result.stderr, b"")
+
+    def test_file_services_copy_exact_binary_empty_and_multichunk_data(self):
+        payloads = (
+            bytes(range(256)),
+            b"",
+            bytes((index * 37 + 11) % 256 for index in range(131329)),
+        )
+        for number, payload in enumerate(payloads):
+            with self.subTest(length=len(payload)):
+                source_path = self.work / f"source-{number}.bin"
+                destination_path = self.work / f"destination-{number}.bin"
+                source_path.write_bytes(payload)
+                binary = self.assemble(
+                    self.file_copy_program(source_path, destination_path))
+                result = self.run_binary(binary)
+                self.assertEqual(result.returncode, 0,
+                                 result.stderr.decode(errors="replace"))
+                self.assertEqual(result.stdout, b"result: 0\n")
+                self.assertEqual(result.stderr, b"")
+                self.assertEqual(destination_path.read_bytes(), payload)
+
+    def test_file_services_decode_valid_utf8_paths(self):
+        source_path = self.work / "café-source.bin"
+        destination_path = self.work / "café-destination.bin"
+        payload = b"\x00\x80\xff"
+        source_path.write_bytes(payload)
+        result = self.run_binary(self.assemble(
+            self.file_copy_program(source_path, destination_path, 4)))
+        self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+        self.assertEqual(destination_path.read_bytes(), payload)
+
+    def test_file_write_zero_count_is_a_successful_noop(self):
+        path = str(self.work / "empty-output.bin")
+        program = self.assemble(f""".version 1.0
+.entry main
+.array path: u8[{len(path.encode()) + 1}] = "{path}"
+.func main() -> i32
+    .local file: file
+    .array data: u8[1]
+    array path
+    sys file_open_write
+    stloc file
+    pop
+    ldloc file
+    array data
+    const.i32 0
+    const.i32 0
+    sys file_write
+    pop
+    ldloc file
+    sys file_close
+    const.i32 0
+    ret.i32
+.end
+""")
+        result = self.run_binary(program)
+        self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+        self.assertEqual(Path(path).read_bytes(), b"")
+
+    def test_open_files_are_closed_on_normal_exit_and_runtime_traps(self):
+        path = self.work / "cleanup.bin"
+        source = f""".version 1.0
+.entry main
+.array path: u8[{len(str(path).encode()) + 1}] = "{path}"
+.array bytes: u8[4] = "\\x00\\x80\\xff"
+.func main() -> i32
+    .local file: file
+    array path
+    sys file_open_write
+    stloc file
+    pop
+    ldloc file
+    array bytes
+    const.i32 0
+    const.i32 3
+    sys file_write
+    pop
+    const.i32 0
+    ret.i32
+.end
+"""
+        result = self.run_binary(self.assemble(source))
+        self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
+        self.assertEqual(path.read_bytes(), b"\x00\x80\xff")
+
+        trap_path = self.work / "trap-cleanup.bin"
+        trap_program = f""".version 1.0
+.entry main
+.array path: u8[{len(str(trap_path).encode()) + 1}] = "{trap_path}"
+.array bytes: u8[3] = "\\x00\\xfe"
+.func main() -> i32
+    .local file: file
+    array path
+    sys file_open_write
+    stloc file
+    pop
+    ldloc file
+    array bytes
+    const.i32 0
+    const.i32 2
+    sys file_write
+    pop
+    const.i32 1
+    const.i32 0
+    div.i32
+    ret.i32
+.end
+"""
+        result = self.run_binary(self.assemble(trap_program))
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b"division by zero", result.stderr)
+        self.assertEqual(trap_path.read_bytes(), b"\x00\xfe")
+
+    def test_invalid_service_arguments_and_stale_handles_trap(self):
+        self.assert_trap(""".version 1.0
+.entry main
+.func main() -> i32
+    .array wrong: i32[1]
+    array wrong
+    sys file_open_read
+    pop
+    const.i32 0
+    ret.i32
+.end
+""", "file path array must contain u8 elements")
+        self.assert_trap(""".version 1.0
+.entry main
+.func main() -> i32
+    .array path: u8[1] = {97}
+    array path
+    sys file_open_read
+    pop
+    const.i32 0
+    ret.i32
+.end
+""", "file path is not NUL-terminated")
+        self.assert_trap(""".version 1.0
+.entry main
+.func main() -> i32
+    .array path: u8[2] = {255, 0}
+    array path
+    sys file_open_read
+    pop
+    const.i32 0
+    ret.i32
+.end
+""", "file path is not valid UTF-8")
+        readable = self.work / "capacity.bin"
+        readable.write_bytes(b"")
+        readable_path = str(readable)
+        self.assert_trap(f""".version 1.0
+.entry main
+.array path: u8[{len(readable_path.encode()) + 1}] = "{readable_path}"
+.func main() -> i32
+    .local file: file
+    .array bytes: u8[1]
+    array path
+    sys file_open_read
+    stloc file
+    pop
+    ldloc file
+    array bytes
+    const.i32 0
+    const.i32 0
+    sys file_read
+    pop
+    const.i32 0
+    ret.i32
+.end
+""", "file_read count must be positive")
+        self.assert_trap(""".version 1.0
+.entry main
+.func main() -> i32
+    .array bytes: u8[1]
+    array bytes
+    const.i32 -1
+    const.i32 1
+    sys stdout_write
+    pop
+    const.i32 0
+    ret.i32
+.end
+""", "stdout_write offset/count is outside")
+
+        path = self.work / "stale.bin"
+        stale = f""".version 1.0
+.entry main
+.array path: u8[{len(str(path).encode()) + 1}] = "{path}"
+.array bytes: u8[2] = "x"
+.func main() -> i32
+    .local file: file
+    array path
+    sys file_open_write
+    stloc file
+    pop
+    ldloc file
+    sys file_close
+    ldloc file
+    array bytes
+    const.i32 0
+    const.i32 1
+    sys file_write
+    pop
+    const.i32 0
+    ret.i32
+.end
+"""
+        self.assert_trap(stale, "invalid, stale, or foreign file handle")
+
+    def test_service_capabilities_and_open_handle_limits(self):
+        output = self.assemble(""".version 1.0
 .entry main
 .func main() -> i32
     const.i32 7
@@ -509,12 +847,167 @@ done:
     ret.i32
 .end
 """)
-        result = self.run_binary(binary)
+        result = self.run_binary(output, "--no-stdout")
         self.assertEqual(result.returncode, 1)
         self.assertEqual(result.stdout, b"")
         self.assertIn(b"unsupported service", result.stderr)
-        self.assertIn(b"stdout_i32", result.stderr)
-        self.assertIn(b"function main[0]+5", result.stderr)
+        self.assertIn(b"capability for 'stdout_i32' is disabled", result.stderr)
+
+        input_program = self.assemble(""".version 1.0
+.entry main
+.func main() -> i32
+    sys stdin_byte
+    pop
+    const.i32 0
+    ret.i32
+.end
+""")
+        result = self.run_binary(input_program, "--no-stdin")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b"capability for 'stdin_byte' is disabled", result.stderr)
+
+        path = str(self.work / "disabled.bin")
+        file_program = self.assemble(f""".version 1.0
+.entry main
+.array path: u8[{len(path.encode()) + 1}] = "{path}"
+.func main() -> i32
+    array path
+    sys file_open_write
+    pop
+    const.i32 0
+    ret.i32
+.end
+""")
+        result = self.run_binary(file_program, "--no-files")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b"capability for 'file_open_write' is disabled", result.stderr)
+        self.assertFalse(Path(path).exists())
+        result = self.run_binary(file_program, "--max-open-files", "0")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b"open file handle limit exceeded", result.stderr)
+        result = self.run_binary(output, "--max-open-files", "4097")
+        self.assertEqual(result.returncode, 2)
+
+        first = str(self.work / "first.bin")
+        second = str(self.work / "second.bin")
+        two_open = self.assemble(f""".version 1.0
+.entry main
+.array first_path: u8[{len(first.encode()) + 1}] = "{first}"
+.array second_path: u8[{len(second.encode()) + 1}] = "{second}"
+.func main() -> i32
+    .local file: file
+    array first_path
+    sys file_open_write
+    stloc file
+    pop
+    array second_path
+    sys file_open_write
+    pop
+    const.i32 0
+    ret.i32
+.end
+""")
+        limited_open = self.run_binary(two_open, "--max-open-files", "1")
+        self.assertEqual(limited_open.returncode, 1)
+        self.assertIn(b"open file handle limit exceeded", limited_open.stderr)
+        self.assertTrue(Path(first).exists())
+        self.assertFalse(Path(second).exists())
+
+        api_disabled = subprocess.run([str(self.consumer), str(file_program), "no-files"],
+                                       cwd=self.work, env=self.env, capture_output=True,
+                                       timeout=30)
+        self.assertEqual(api_disabled.returncode, 4)
+        self.assertTrue(api_disabled.stderr.startswith(b"4:0:"))
+        self.assertIn(b"host capability for 'file_open_write' is disabled",
+                      api_disabled.stderr)
+        api_limited = subprocess.run([str(self.consumer), str(file_program), "zero-files"],
+                                     cwd=self.work, env=self.env, capture_output=True,
+                                     timeout=30)
+        self.assertEqual(api_limited.returncode, 4)
+        self.assertTrue(api_limited.stderr.startswith(b"5:0:"))
+        self.assertIn(b"open file handle limit exceeded", api_limited.stderr)
+
+        missing_path = str(self.work / "missing-file.bin")
+        missing_program = self.assemble(f""".version 1.0
+.entry main
+.array path: u8[{len(missing_path.encode()) + 1}] = "{missing_path}"
+.func main() -> i32
+    array path
+    sys file_open_read
+    pop
+    const.i32 0
+    ret.i32
+.end
+""")
+        missing = self.run_binary(missing_program)
+        self.assertEqual(missing.returncode, 1)
+        self.assertIn(b"I/O error", missing.stderr)
+        self.assertIn(b"opening '", missing.stderr)
+
+    @unittest.skipUnless(os.name == "posix" and Path("/proc/self/mem").exists()
+                         and Path("/dev/full").exists(),
+                         "requires Linux procfs and /dev/full I/O error fixtures")
+    def test_file_io_errors_and_repeated_failure_cleanup(self):
+        bad_read = """.version 1.0
+.entry main
+.array path: u8[15] = "/proc/self/mem"
+.func main() -> i32
+    .local file: file
+    .array data: u8[1]
+    array path
+    sys file_open_read
+    stloc file
+    pop
+    ldloc file
+    array data
+    const.i32 0
+    const.i32 1
+    sys file_read
+    pop
+    const.i32 0
+    ret.i32
+.end
+"""
+        failed_read = self.assemble(bad_read)
+        result = self.run_binary(failed_read)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b"I/O error", result.stderr)
+        self.assertIn(b"reading file", result.stderr)
+
+        full_path = "/dev/full"
+        bad_write = f""".version 1.0
+.entry main
+.array path: u8[{len(full_path) + 1}] = "{full_path}"
+.array data: u8[2] = "x"
+.func main() -> i32
+    .local file: file
+    array path
+    sys file_open_write
+    stloc file
+    pop
+    ldloc file
+    array data
+    const.i32 0
+    const.i32 1
+    sys file_write
+    pop
+    ldloc file
+    sys file_close
+    const.i32 0
+    ret.i32
+.end
+"""
+        failed_write = self.assemble(bad_write)
+        result = self.run_binary(failed_write)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b"I/O error", result.stderr)
+        self.assertIn(b"closing file handle", result.stderr)
+
+        result = subprocess.run([str(self.consumer), str(failed_read), "repeat"],
+                                cwd=self.work, env=self.env, capture_output=True,
+                                timeout=30)
+        self.assertEqual(result.returncode, 4, result.stderr.decode(errors="replace"))
+        self.assertTrue(result.stderr.startswith(b"6:0:"))
 
     def test_deterministic_instruction_stack_call_and_heap_limits(self):
         simple = self.assemble(""".version 1.0
@@ -610,10 +1103,18 @@ done:
 .end
 """
         binary = self.assemble(source)
-        unsupported = subprocess.run([str(self.consumer), str(binary)], cwd=self.work,
-                                     env=self.env, capture_output=True, timeout=30)
-        self.assertEqual(unsupported.returncode, 4)
-        self.assertTrue(unsupported.stderr.startswith(b"4:0:5:host service 'stdout_i32'"))
+        enabled = subprocess.run([str(self.consumer), str(binary)], cwd=self.work,
+                                 env=self.env, capture_output=True, timeout=30)
+        self.assertEqual(enabled.returncode, 0)
+        self.assertRegex(enabled.stdout.decode(), r"^70:\d+\n$")
+        self.assertEqual(enabled.stderr, b"")
+
+        disabled = subprocess.run([str(self.consumer), str(binary), "no-stdout"],
+                                  cwd=self.work, env=self.env, capture_output=True,
+                                  timeout=30)
+        self.assertEqual(disabled.returncode, 4)
+        self.assertTrue(disabled.stderr.startswith(
+            b"4:0:5:host capability for 'stdout_i32' is disabled"))
 
         limited = subprocess.run([str(self.consumer), str(binary), "steps"], cwd=self.work,
                                  env=self.env, capture_output=True, timeout=30)
