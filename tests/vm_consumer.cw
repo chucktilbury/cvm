@@ -1,5 +1,6 @@
 import cvmfile as IO
 import cvmrun as VM
+import cvm as CVM
 import system as Sys
 
 start {
@@ -13,6 +14,28 @@ start {
     VM.ExecutionResult result = null
     String mode = ""
     if (Sys.Process().argc() == 3) { mode = Sys.Process().arg(2) }
+    if (mode.equals("handles")) {
+        VM.ExecutionResult first = machine.run(loaded.bytes())
+        VM.ExecutionResult second = machine.run(loaded.bytes())
+        if (!first.ok() || !second.ok() || first.guestResult() <= 0 ||
+            second.guestResult() <= first.guestResult()) { Sys.Process().exit(6) }
+        CVM.InstructionBuilder code = CVM.InstructionBuilder()
+        code.emit(CVM.Opcode.CONST_I32, first.guestResult())
+        code.emit(CVM.Opcode.SYS, CVM.Service.FILE_CLOSE_HANDLE)
+        code.emit(CVM.Opcode.CONST_I32, 0)
+        code.emitNoOperand(CVM.Opcode.RET_I32)
+        CVM.ContainerBuilder builder = CVM.ContainerBuilder()
+        builder.addFunction("main", code.bytes(), buffer[], 0, 0, 1, 1)
+        CVM.BuildResult encoded = builder.encode()
+        if (!encoded.ok()) { Sys.Process().exit(7) }
+        VM.ExecutionResult stale = machine.run(encoded.bytes())
+        VM.ExecutionResult foreign = VM.VirtualMachine().run(encoded.bytes())
+        if (stale.category() != VM.ExecutionResult.RUNTIME_TRAP ||
+            foreign.category() != VM.ExecutionResult.RUNTIME_TRAP) { Sys.Process().exit(8) }
+        Sys.StandardIO().writeLine(format("{}:{}", second.guestResult(),
+            second.instructionsExecuted()))
+        Sys.Process().exit(0)
+    }
     if (mode.equals("repeat")) {
         int before = Sys.FileSystem().listDir("/proc/self/fd").length
         int iteration = 0

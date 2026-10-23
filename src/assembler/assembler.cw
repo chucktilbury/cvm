@@ -243,8 +243,8 @@ class Assembler {
                 int value = instruction.value
                 if (instruction.opcode == CVM.Opcode.SYS) {
                     CVM.Service services = CVM.Service()
-                    while (value <= CVM.Service.FILE_CLOSE && !services.name(value).equals(instruction.operand)) { value = value + 1 }
-                    if (value > CVM.Service.FILE_CLOSE) { fail("unknown service", instruction.line, instruction.column) }
+                    while (value <= CVM.Service.FILE_CLOSE_HANDLE && !services.name(value).equals(instruction.operand)) { value = value + 1 }
+                    if (value > CVM.Service.FILE_CLOSE_HANDLE) { fail("unknown service", instruction.line, instruction.column) }
                 }
                 if (kind == 3) { value = resolve(function.locals, instruction.operand, instruction) }
                 if (kind == 4) { value = resolve(globalNames, instruction.operand, instruction) }

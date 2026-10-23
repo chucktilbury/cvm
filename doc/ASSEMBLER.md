@@ -50,6 +50,13 @@ are resolved after parsing. Branches encode function-relative byte offsets.
 Locals follow parameters in declaration order. References to another
 function's local array are rejected.
 
+`sys file_open`, `sys file_read_handle`, `sys file_write_handle`, and
+`sys file_close_handle` resolve through `CVM.Service` to stable IDs 9..12.
+No grammar extension is needed. Their metadata supplies stack arities;
+runtime checks enforce their types, modes and bounds. See the
+[integer-file example](INTERPRETER.md#integer-file-reproduction-and-smallc-lowering)
+and [canonical service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-io-boundary).
+
 Blank lines, CRLF/LF, a final line without LF, and semicolon comments are
 accepted. A semicolon is not an instruction separator. Identifiers are
 ASCII and case-sensitive. Source must be valid UTF-8 without embedded NUL.

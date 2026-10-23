@@ -659,6 +659,310 @@ done:
         self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
         self.assertEqual(destination_path.read_bytes(), payload)
 
+    def handle_program(self, path, mode, body, data=b"", capacity=None):
+        path = str(path)
+        if capacity is None:
+            capacity = max(1, len(data) + 1)
+        return f""".version 1.0
+.entry main
+.array path: u8[{len(path.encode()) + 1}] = "{path}"
+.array mode: u8[{len(mode.encode()) + 1}] = "{mode}"
+.array data: u8[{capacity}] = "{self.byte_literal(data)}"
+.func identity(h:i32) -> i32
+    ldloc h
+    ret.i32
+.end
+.func main() -> i32
+    .local h: i32
+    .local old: i32
+    array path
+    array mode
+    sys file_open
+    call identity
+    stloc h
+    pop
+{body}
+.end
+"""
+
+    def test_integer_handle_binary_write_append_and_truncate(self):
+        path = self.work / "café-handles.bin"
+        payload = bytes(range(256))
+        for mode, initial in (("w", b"old bytes"), ("a", b"prefix\x00\xff"),
+                              ("a", None), ("w", None)):
+            with self.subTest(mode=mode, initial=initial):
+                if path.exists():
+                    path.unlink()
+                if initial is not None:
+                    path.write_bytes(initial)
+                source = self.handle_program(path, mode, """
+    ldloc h
+    array data
+    const.i32 256
+    sys file_write_handle
+    stloc old
+    pop
+    ldloc h
+    sys file_close_handle
+    ldloc old
+    ret.i32""", payload)
+                self.assert_result(source, 256)
+                prefix = initial if mode == "a" and initial is not None else b""
+                self.assertEqual(path.read_bytes(), prefix + payload)
+
+    def test_documented_integer_file_example(self):
+        binary = self.assert_result((ROOT / "tests/fixtures/integer-files.asm").read_text(), 3)
+        self.assertEqual((self.work / "integer-files.bin").read_bytes(), b"\x00\x80\xff")
+        encoded = bytearray(binary.read_bytes())
+        code, _, _ = section_offsets(encoded)[1]
+        self.assertEqual(encoded[code + 6:code + 8], b"\x21\x09")
+        encoded[code + 7] = 13
+        binary.write_bytes(encoded)
+        rejected = self.run_binary(binary)
+        self.assertEqual(rejected.returncode, 1)
+        self.assertIn(b"unknown service number", rejected.stderr)
+
+    def test_integer_handle_bounded_reads_short_counts_eof_and_zero(self):
+        path = self.work / "read.bin"
+        path.write_bytes(bytes(range(256)))
+        source = self.handle_program(path, "r", """
+    ldloc h
+    array data
+    const.i32 0
+    sys file_read_handle
+    sys stdout_i32
+    ldloc h
+    array data
+    const.i32 3
+    sys file_read_handle
+    sys stdout_i32
+    array data
+    const.i32 0
+    const.i32 4
+    sys stdout_write
+    pop
+    ldloc h
+    array data
+    const.i32 256
+    sys file_read_handle
+    sys stdout_i32
+    array data
+    const.i32 0
+    const.i32 253
+    sys stdout_write
+    pop
+    ldloc h
+    array data
+    const.i32 256
+    sys file_read_handle
+    sys stdout_i32
+    ldloc h
+    sys file_close_handle
+    const.i32 0
+    ret.i32""", b"\xfe" * 256)
+        result = self.run_binary(self.assemble(source))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, b"03\x00\x01\x02\xfe253"
+                         + bytes(range(3, 256)) + b"0result: 0\n")
+        self.assertEqual(result.stderr, b"")
+        path.write_bytes(b"")
+        self.assert_result(self.handle_program(path, "r", """
+    ldloc h
+    array data
+    const.i32 1
+    sys file_read_handle
+    ret.i32"""), 0)
+
+    def test_integer_handle_empty_operations_validate_without_io(self):
+        path = self.work / "zero.bin"
+        for mode, operation in (("r", "read"), ("w", "write"), ("a", "write")):
+            path.write_bytes(b"keep")
+            self.assert_result(self.handle_program(path, mode, f"""
+    ldloc h
+    array data
+    const.i32 0
+    sys file_{operation}_handle
+    ret.i32"""), 0)
+            self.assertEqual(path.read_bytes(), b"" if mode == "w" else b"keep")
+
+    def test_integer_handle_lifecycle_and_argument_validation(self):
+        path = self.work / "lifecycle.bin"
+        close = "    ldloc h\n    sys file_close_handle\n"
+        reopen = "    array path\n    array mode\n    sys file_open\n"
+        self.assert_result(self.handle_program(path, "w", close + reopen + """
+    ldloc h
+    gt.i32
+    ret.i32"""), 1)
+        for body in (close + close, close + reopen + "    pop\n" + close):
+            self.assert_trap(self.handle_program(path, "w", body + """
+    const.i32 0
+    ret.i32"""), "invalid, stale, or foreign file handle")
+        for operation in ("read", "write"):
+            self.assert_trap(self.handle_program(path, "w", close + f"""
+    ldloc h
+    array data
+    const.i32 0
+    sys file_{operation}_handle
+    ret.i32"""), "invalid, stale, or foreign file handle")
+        for operation in ("read", "write", "close"):
+            for handle in (-2147483648, -1, 0, 2147483647):
+                arguments = "" if operation == "close" else (
+                    "    array data\n    const.i32 0\n")
+                discard = "" if operation == "close" else "    pop\n"
+                self.assert_trap(self.handle_program(path, "w", f"""
+    const.i32 {handle}
+{arguments}    sys file_{operation}_handle
+{discard}    const.i32 0
+    ret.i32"""), "invalid, stale, or foreign file handle")
+        for operation in ("read", "write"):
+            for length in (-1, 2, 2147483647):
+                self.assert_trap(self.handle_program(path, "w", f"""
+    ldloc h
+    array data
+    const.i32 {length}
+    sys file_{operation}_handle
+    ret.i32"""), "offset/count is outside the byte array")
+            source = self.handle_program(path, "w", f"""
+    ldloc h
+    array data
+    const.i32 0
+    sys file_{operation}_handle
+    ret.i32""").replace('.array data: u8[1] = ""', ".array data: i32[1]")
+            self.assert_trap(source, "buffer must contain u8 elements")
+        self.assert_trap(self.handle_program(path, "w", """
+    const.u8 1
+    sys file_close_handle
+    const.i32 0
+    ret.i32"""), "expected i32")
+        self.assert_trap(self.handle_program(path, "w", """
+    ldloc h
+    sys file_close
+    const.i32 0
+    ret.i32"""), "expected file")
+        opaque = self.handle_program(path, "w", """
+    const.i32 1
+    sys file_close_handle
+    const.i32 0
+    ret.i32""").replace("    array mode\n    sys file_open\n    call identity\n",
+                       "    sys file_open_write\n").replace(".local h: i32", ".local h: file")
+        self.assert_trap(opaque, "invalid, stale, or foreign file handle")
+
+    def test_integer_handle_exact_modes_and_path_validation(self):
+        path = self.work / "invalid.bin"
+        for mode in ("", "rb", "wb", "ab", "r+", "w+", "a+", "R", "rw", "é"):
+            self.assert_trap(self.handle_program(path, mode, """
+    const.i32 0
+    ret.i32"""), "file mode must")
+            self.assertFalse(path.exists())
+        source = self.handle_program(path, "w", "    const.i32 0\n    ret.i32")
+        for declaration in (".array mode: u8[1] = {119}",
+                            ".array mode: u8[2] = {119, 119}",
+                            ".array mode: i32[2]"):
+            self.assert_trap(re.sub(r"\.array mode:.*", declaration, source),
+                             "file mode must")
+        for declaration, message in (
+                (".array path: u8[2] = {255, 0}", "not valid UTF-8"),
+                (".array path: u8[1] = {97}", "not NUL-terminated"),
+                (".array path: u8[1]", "cannot be empty"),
+                (".array path: i32[1]", "must contain u8")):
+            self.assert_trap(re.sub(r"\.array path:.*", declaration, source), message)
+        self.assertFalse(path.exists())
+        valid_trailing = source.replace('.array mode: u8[2] = "w"',
+                                        '.array mode: u8[4] = {119, 0, 255, 43}')
+        self.assert_result(valid_trailing, 0)
+        self.assertEqual(path.read_bytes(), b"")
+
+    def test_integer_handle_registries_are_isolated_across_runs(self):
+        source = self.handle_program(self.work / "isolated.bin", "w",
+                                     "    ldloc h\n    ret.i32")
+        binary = self.assemble(source)
+        result = subprocess.run([str(self.consumer), str(binary), "handles"],
+                                cwd=self.work, env=self.env, capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertRegex(result.stdout, rb"^[1-9][0-9]*:[0-9]+\n$")
+        self.assertEqual(result.stderr, b"")
+
+    def test_integer_handle_capabilities_shared_limits_and_cleanup(self):
+        path = self.work / "cleanup-handle.bin"
+        source = self.handle_program(path, "w", """
+    ldloc h
+    array data
+    const.i32 3
+    sys file_write_handle
+    pop
+    const.i32 0
+    ret.i32""", b"\x00\xff\x80")
+        binary = self.assemble(source)
+        for arguments, message in ((("--no-files",), b"capability"),
+                                   (("--max-open-files", "0"), b"open file handle limit")):
+            result = self.run_binary(binary, *arguments)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertIn(message, result.stderr)
+            self.assertFalse(path.exists())
+        mixed = source.replace("    const.i32 0\n    ret.i32", """
+    array path
+    sys file_open_write
+    pop
+    const.i32 0
+    ret.i32""")
+        result = self.run_binary(self.assemble(mixed), "--max-open-files", "1")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(b"open file handle limit", result.stderr)
+        for mode in ("no-files", "zero-files"):
+            result = subprocess.run([str(self.consumer), str(binary), mode],
+                                    cwd=self.work, env=self.env, capture_output=True, timeout=30)
+            self.assertEqual(result.returncode, 4, result.stderr)
+        for tail in ("    const.i32 0\n    ret.i32",
+                     "    const.i32 1\n    const.i32 0\n    div.i32\n    ret.i32",
+                     "    const.i32 -1\n    sys file_close_handle\n"
+                     "    const.i32 0\n    ret.i32"):
+            program = self.assemble(source.replace("    const.i32 0\n    ret.i32", tail))
+            result = self.run_binary(program)
+            self.assertEqual(result.returncode, 0 if "div.i32" not in tail
+                             and "file_close_handle" not in tail else 1)
+            self.assertEqual(path.read_bytes(), b"\x00\xff\x80")
+            if Path("/proc/self/fd").is_dir():
+                repeated = subprocess.run([str(self.consumer), str(program), "repeat"],
+                                          cwd=self.work, env=self.env, capture_output=True, timeout=30)
+                self.assertEqual(repeated.returncode, 0 if result.returncode == 0 else 4,
+                                 repeated.stderr)
+
+    def test_integer_handle_missing_and_wrong_access_are_io_errors(self):
+        path = self.work / "missing.bin"
+        source = self.handle_program(path, "r", "    const.i32 0\n    ret.i32")
+        self.assert_trap(source, "opening '", "I/O error")
+        path.write_bytes(b"x")
+        for mode, operation in (("r", "write"), ("w", "read"), ("a", "read")):
+            self.assert_trap(self.handle_program(path, mode, f"""
+    ldloc h
+    array data
+    const.i32 1
+    sys file_{operation}_handle
+    ret.i32""", b"x"), f"{operation}ing file" if operation == "read" else "writing file",
+                             "I/O error")
+
+    @unittest.skipUnless(Path("/proc/self/mem").exists() and Path("/dev/full").exists(),
+                         "requires Linux procfs and /dev/full")
+    def test_integer_handle_host_io_failure_is_not_eof_or_success(self):
+        for path, mode, operation in (("/proc/self/mem", "r", "read"),
+                                      ("/dev/full", "w", "write"),
+                                      ("/dev/full", "a", "write")):
+            source = self.handle_program(path, mode, f"""
+    ldloc h
+    array data
+    const.i32 1
+    sys file_{operation}_handle
+    pop
+    ldloc h
+    sys file_close_handle
+    const.i32 0
+    ret.i32""", b"x")
+            self.assert_trap(source, "file", "I/O error")
+            result = subprocess.run([str(self.consumer), str(self.work / "program.cvm"), "repeat"],
+                                    cwd=self.work, env=self.env, capture_output=True, timeout=30)
+            self.assertEqual(result.returncode, 4, result.stderr)
+            self.assertTrue(result.stderr.startswith(b"6:"))
+
     def test_file_write_zero_count_is_a_successful_noop(self):
         path = str(self.work / "empty-output.bin")
         program = self.assemble(f""".version 1.0

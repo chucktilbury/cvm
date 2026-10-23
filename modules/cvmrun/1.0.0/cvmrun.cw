@@ -253,17 +253,20 @@ namespace CVMRun {
         int _id
         Sys.File _file
         bool _open
+        bool _integerHandle
 
         public:
-        HostFile(int id, Sys.File file) {
+        HostFile(int id, Sys.File file, bool integerHandle) {
             _id = id
             _file = file
             _open = true
+            _integerHandle = integerHandle
         }
 
         int id() { return _id }
         Sys.File file() { return _file }
         bool open() { return _open }
+        bool integerHandle() { return _integerHandle }
         void invalidate() { _open = false }
     }
 
@@ -865,11 +868,12 @@ namespace CVMRun {
             return true
         }
 
-        HostFile findFileHandle(int id) {
+        HostFile findFileHandle(int id, bool integerHandle) {
             int index = 0
             while (index < _fileHandles.length) {
                 HostFile hostFile = _fileHandles[index] as HostFile
-                if (hostFile != null && hostFile.open() && hostFile.id() == id) {
+                if (hostFile != null && hostFile.open() && hostFile.id() == id &&
+                    hostFile.integerHandle() == integerHandle) {
                     return hostFile
                 }
                 index = index + 1
@@ -1034,6 +1038,23 @@ namespace CVMRun {
                 return false
             }
             return true
+        }
+
+        String decodeFileMode(ArrayInstance instance) {
+            if (instance.elementType() != Value.U8 || instance.length() < 2) {
+                trap(ExecutionResult.RUNTIME_TRAP,
+                    "file mode must be a NUL-terminated u8 array containing exactly r, w, or a")
+                return null
+            }
+            int mode = int(instance.bytes()[0])
+            if (int(instance.bytes()[1]) != 0 || (mode != 114 && mode != 119 && mode != 97)) {
+                trap(ExecutionResult.RUNTIME_TRAP,
+                    "file mode must be exactly r, w, or a followed by NUL")
+                return null
+            }
+            if (mode == 114) { return "rb" }
+            if (mode == 119) { return "wb" }
+            return "ab"
         }
 
         bool checkIOError(String operation, String error) {
@@ -1208,7 +1229,17 @@ namespace CVMRun {
             }
 
             if (service == CVM.Service.FILE_OPEN_READ ||
-                service == CVM.Service.FILE_OPEN_WRITE) {
+                service == CVM.Service.FILE_OPEN_WRITE || service == CVM.Service.FILE_OPEN) {
+                bool integerHandle = service == CVM.Service.FILE_OPEN
+                String mode = "rb"
+                if (service == CVM.Service.FILE_OPEN_WRITE) { mode = "wb" }
+                if (integerHandle) {
+                    Value modeReference = popType(Value.ARRAY_REF)
+                    if (modeReference == null || _failure != null ||
+                        !validArrayReference(modeReference)) { return false }
+                    mode = decodeFileMode(modeReference.array())
+                    if (mode == null || _failure != null) { return false }
+                }
                 Value reference = popType(Value.ARRAY_REF)
                 if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
                 String path = decodePath(reference.array())
@@ -1221,8 +1252,6 @@ namespace CVMRun {
                     return false
                 }
                 Sys.File file = null
-                String mode = "rb"
-                if (service == CVM.Service.FILE_OPEN_WRITE) { mode = "wb" }
                 try {
                     file = Sys.File(path, mode)
                 } except(Exception) as caught {
@@ -1232,29 +1261,39 @@ namespace CVMRun {
                 }
                 int handleId = _nextFileHandle
                 _nextFileHandle = _nextFileHandle + 1
-                _fileHandles.append(HostFile(handleId, file))
-                return push(Value(Value.FILE, handleId, null, true))
+                _fileHandles.append(HostFile(handleId, file, integerHandle))
+                int resultType = Value.FILE
+                if (integerHandle) { resultType = Value.I32 }
+                return push(Value(resultType, handleId, null, true))
             }
 
-            if (service == CVM.Service.FILE_READ) {
+            if (service == CVM.Service.FILE_READ || service == CVM.Service.FILE_READ_HANDLE) {
+                bool integerHandle = service == CVM.Service.FILE_READ_HANDLE
                 Value capacityValue = popType(Value.I32)
                 if (capacityValue == null || _failure != null) { return false }
-                Value offsetValue = popType(Value.I32)
-                if (offsetValue == null || _failure != null) { return false }
+                int offset = 0
+                if (!integerHandle) {
+                    Value offsetValue = popType(Value.I32)
+                    if (offsetValue == null || _failure != null) { return false }
+                    offset = offsetValue.number()
+                }
                 Value reference = popType(Value.ARRAY_REF)
                 if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
-                Value fileValue = popType(Value.FILE)
+                int handleType = Value.FILE
+                if (integerHandle) { handleType = Value.I32 }
+                Value fileValue = popType(handleType)
                 if (fileValue == null || _failure != null) { return false }
                 int capacity = capacityValue.number()
                 ArrayInstance instance = reference.array()
-                if (!checkByteArrayRange(instance, offsetValue.number(), capacity, false, "file_read")) { return false }
-                HostFile hostFile = findFileHandle(fileValue.number())
+                if (!checkByteArrayRange(instance, offset, capacity, integerHandle, serviceName)) { return false }
+                HostFile hostFile = findFileHandle(fileValue.number(), integerHandle)
                 if (hostFile == null) {
                     trap(ExecutionResult.RUNTIME_TRAP,
                         format("invalid, stale, or foreign file handle {}", fileValue.number()))
                     return false
                 }
                 if (!canPushServiceResult()) { return false }
+                if (capacity == 0) { return push(Value(Value.I32, 0, null, true)) }
                 buffer bytes = buffer[]
                 String error = ""
                 try {
@@ -1268,27 +1307,48 @@ namespace CVMRun {
                     trap(ExecutionResult.IO_ERROR, "file read returned invalid byte count")
                     return false
                 }
+                if (integerHandle && bytes.length == 0) {
+                    bool atEnd = false
+                    try {
+                        atEnd = hostFile.file().eof()
+                        error = Sys.System().lastError()
+                    } except(Exception) as caught {
+                        error = caught.message
+                    }
+                    if (!checkIOError("checking file EOF", error)) { return false }
+                    if (!atEnd) {
+                        trap(ExecutionResult.IO_ERROR, "file read made no progress before EOF")
+                        return false
+                    }
+                }
                 int index = 0
                 while (index < bytes.length) {
-                    instance.bytes()[offsetValue.number() + index] = bytes[index]
+                    instance.bytes()[offset + index] = bytes[index]
                     index = index + 1
                 }
                 return push(Value(Value.I32, bytes.length, null, true))
             }
 
-            if (service == CVM.Service.FILE_WRITE) {
+            if (service == CVM.Service.FILE_WRITE || service == CVM.Service.FILE_WRITE_HANDLE) {
+                bool integerHandle = service == CVM.Service.FILE_WRITE_HANDLE
                 Value countValue = popType(Value.I32)
                 if (countValue == null || _failure != null) { return false }
-                Value offsetValue = popType(Value.I32)
-                if (offsetValue == null || _failure != null) { return false }
+                int offset = 0
+                if (!integerHandle) {
+                    Value offsetValue = popType(Value.I32)
+                    if (offsetValue == null || _failure != null) { return false }
+                    offset = offsetValue.number()
+                }
                 Value reference = popType(Value.ARRAY_REF)
                 if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
-                Value fileValue = popType(Value.FILE)
+                int handleType = Value.FILE
+                if (integerHandle) { handleType = Value.I32 }
+                Value fileValue = popType(handleType)
                 if (fileValue == null || _failure != null) { return false }
                 int count = countValue.number()
                 ArrayInstance instance = reference.array()
-                if (!checkByteArrayRange(instance, offsetValue.number(), count, true, "file_write")) { return false }
-                HostFile hostFile = findFileHandle(fileValue.number())
+                if (!checkByteArrayRange(instance, offset, count, true, serviceName)) { return false }
+                HostFile hostFile = findFileHandle(fileValue.number(), integerHandle)
                 if (hostFile == null) {
                     trap(ExecutionResult.RUNTIME_TRAP,
                         format("invalid, stale, or foreign file handle {}", fileValue.number()))
@@ -1296,7 +1356,7 @@ namespace CVMRun {
                 }
                 if (!canPushServiceResult()) { return false }
                 if (count == 0) { return push(Value(Value.I32, 0, null, true)) }
-                buffer chunk = instance.bytes()[offsetValue.number():offsetValue.number() + count]
+                buffer chunk = instance.bytes()[offset:offset + count]
                 int written = -1
                 String error = ""
                 try {
@@ -1313,10 +1373,13 @@ namespace CVMRun {
                 return push(Value(Value.I32, written, null, true))
             }
 
-            if (service == CVM.Service.FILE_CLOSE) {
-                Value fileValue = popType(Value.FILE)
+            if (service == CVM.Service.FILE_CLOSE || service == CVM.Service.FILE_CLOSE_HANDLE) {
+                bool integerHandle = service == CVM.Service.FILE_CLOSE_HANDLE
+                int handleType = Value.FILE
+                if (integerHandle) { handleType = Value.I32 }
+                Value fileValue = popType(handleType)
                 if (fileValue == null || _failure != null) { return false }
-                HostFile hostFile = findFileHandle(fileValue.number())
+                HostFile hostFile = findFileHandle(fileValue.number(), integerHandle)
                 if (hostFile == null) {
                     trap(ExecutionResult.RUNTIME_TRAP,
                         format("invalid, stale, or foreign file handle {}", fileValue.number()))

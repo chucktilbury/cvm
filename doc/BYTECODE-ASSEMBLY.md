@@ -461,7 +461,9 @@ conversion may discard them.
 Service arguments are pushed left-to-right and consumed according to the
 signature; ArrayRefs come from `array`, not a guest pointer. Services check
 types and bounds, borrow arrays synchronously, and retain no references.
-File handles are opaque and belong to one VM instance.
+File handles belong to one VM run. Services 4..8 use opaque `file` values;
+services 9..12 use positive i32 tokens. These handle families are not
+interchangeable.
 
 | ID | Assembly name | Exact VM signature | Contract |
 |---:|---|---|---|
@@ -474,9 +476,17 @@ File handles are opaque and belong to one VM instance.
 | 6 | `file_read` | `(file, ArrayRef<u8>, i32 offset, i32 capacity) -> i32` | bytes read; zero is EOF |
 | 7 | `file_write` | `(file, ArrayRef<u8>, i32 offset, i32 count) -> i32` | bytes written; may be short |
 | 8 | `file_close` | `(file) -> void` | close and invalidate |
+| 9 | `file_open` | `(ArrayRef<u8> nul_path, ArrayRef<u8> nul_mode) -> i32` | binary `r` existing/read, `w` create/truncate/write, `a` create/append/write |
+| 10 | `file_read_handle` | `(i32 handle, ArrayRef<u8> buffer, i32 length) -> i32` | read at buffer index zero; return actual count |
+| 11 | `file_write_handle` | `(i32 handle, ArrayRef<u8> buffer, i32 length) -> i32` | write from buffer index zero; return actual progress |
+| 12 | `file_close_handle` | `(i32 handle) -> void` | close and invalidate integer token |
 
-Offsets and counts are nonnegative and must fit the array. A read capacity
-must be positive; reads may return 0..capacity, with zero meaning EOF, not
+IDs 0..8 and their behavior are unchanged. New services use the existing
+`sys NAME` grammar, u8 service operand, and container version 1.0; no syntax or
+container-layout change is needed. Old readers may reject the new IDs.
+
+Offsets and counts are nonnegative and must fit the array. The opaque
+`file_read` capacity must be positive; reads may return 0..capacity, with zero meaning EOF, not
 error. A write count may be zero (which returns zero); for positive counts,
 writes may be short but must make progress, so the guest retries the
 remainder and a zero-byte result is an I/O failure. Host I/O errors trap
@@ -485,7 +495,31 @@ foreign, stale, and closed handles trap.
 Close failure reports I/O failure but still invalidates the handle. On
 return, trap, or host cancellation, remaining handles are closed; cleanup
 errors do not replace the primary failure. Host policy controls open-file,
-memory, instruction, frame/recursion, and time limits.
+memory, instruction, and frame/recursion limits.
+
+For services 10/11, `0 <= length <= buffer capacity`; there is no offset
+argument and no clamping. Length zero validates the handle and u8 buffer,
+then returns zero without host I/O (it does not indicate EOF). Positive
+reads return zero only at EOF; unread buffer bytes remain unchanged.
+Positive writes return actual positive progress, which can be less than
+length. To retry a short write using service 11, move the unwritten suffix
+to buffer index zero before the next call. Host errors, including delayed
+buffered-write errors on close/cleanup, are `IO_ERROR` even after earlier
+positive progress. Invalid types, ranges, modes and handles are runtime
+traps; disabled filesystem capability is `UNSUPPORTED_SERVICE`; open-file
+limit or identifier exhaustion is `RESOURCE_LIMIT`. All handle families and
+owned binary stdin share the configured open-file limit.
+
+Integer tokens are in 1..2147483647, allocated monotonically without reuse
+within a VM instance, even across repeated `run` calls. A run starts with an
+empty registry and closes every owned file before returning, including on
+service/runtime failure. Only currently open tokens in that run's integer
+registry are accepted; closed tokens and opaque-file IDs cannot be used.
+Exhaustion traps before opening a file, rather than wrapping. Independent
+VM instances have independent registries and may issue the same numeric
+token; integers are scoped descriptors, not unforgeable cross-VM identities.
+Never pass them between runs or VM instances. Cleanup never closes borrowed
+process standard streams.
 
 `nul_path` is a fixed u8 array. The first NUL terminates a nonempty path;
 preceding bytes must be valid UTF-8 and contain no NUL. Bytes after the
@@ -493,10 +527,16 @@ terminator are ignored. The service copies and validates the path
 synchronously before passing a host path. This conversion is only for
 filenames. File and standard-stream contents are bytes, never UTF-8 strings.
 
+`nul_mode` is a u8 array whose first two bytes must be `r\0`, `w\0`, or
+`a\0`. Bytes after the first NUL are ignored as for paths. Empty, unterminated,
+non-ASCII, update (`+`) and libc binary (`rb`, `wb`, `ab`) mode strings trap.
+The runtime supplies `rb`, `wb`, or `ab` to the host, independently of the
+host's default text/binary mode.
+
 SmallC has no general pointers or array parameters. A future backend lowers
 I/O intrinsics to `array name` plus `sys service`, using fixed-size local or
 global byte arrays. It does not silently add array parameters to SmallC.
-`file_open_*` copies the path before returning; read/write borrows a guest
+`file_open` and `file_open_*` copy the path before returning; read/write borrows a guest
 buffer only until the service returns. Guest functions may exchange scalar
 and file-handle values, but cannot return/retain ArrayRefs.
 
