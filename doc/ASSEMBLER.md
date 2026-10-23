@@ -88,9 +88,11 @@ This is **not** a semantic verifier: scalar/ArrayRef types at stack positions,
 call argument types, array element operations, file-handle lifetimes, and
 runtime/execution safety remain unverified. For example, a u8 value returned
 with `ret.i32` can pass depth checks. The shared structural validator is run
-before output, but its documented limitations still apply. No interpreter,
-runtime services, DEBUG generation, disassembler, SmallC backend, or
-execution-safety guarantee is included.
+before output, but its documented limitations still apply. The separate
+`cvm-run` interpreter detects these cases when they execute; it does not
+provide a pre-execution semantic verifier. Runtime services, DEBUG generation,
+disassembly, SmallC integration, and an execution-safety guarantee are not
+included. See [Interpreter usage and scope](INTERPRETER.md).
 
 ## Reusable binary file adapter
 
@@ -113,6 +115,11 @@ start {
 Failed reads return an empty buffer and an explicit diagnostic, never partial
 data disguised as success. `Files.write(path, buffer)` returns the same shape
 (its success buffer is empty); null data is rejected without opening a file.
+`Files.readLimited(path, maximumBytes)` provides the same contract while
+reading at most one byte beyond the supplied limit to detect oversized input
+without buffering the rest; it is used by `cvm-run` before validation. Its
+`Result.category()` distinguishes ordinary I/O failure from
+`Result.LIMIT_EXCEEDED`.
 Neither operation converts binary data through String. Reads use 64 KiB
 chunks until EOF, including partial final reads. Writes advance by actual
 byte counts, retry a short successful write, reject zero/invalid progress,

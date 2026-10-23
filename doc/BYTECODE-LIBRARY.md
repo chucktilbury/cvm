@@ -55,9 +55,10 @@ It does not yet check global/array record contents and initializers, all string
 references, DEBUG records, UTF-8 validity, data/type range overlap,
 array ownership, call signatures, stack/type dataflow or joins, reachable
 fallthrough, return correctness, maximum stack declarations, or runtime
-behavior. The library does not execute bytecode. Do not treat a structurally
-accepted file as safe to execute. Those checks belong to later validator and
-interpreter milestones.
+behavior. The `cvm` library does not execute bytecode. The separate
+`cvmrun` package defensively checks data it consumes and traps on invalid
+runtime transitions, but is not a verifier or security boundary. Do not treat
+a structurally accepted file as safe to execute.
 
 ## Byte I/O boundary
 
