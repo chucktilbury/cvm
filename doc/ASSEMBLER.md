@@ -90,9 +90,10 @@ runtime/execution safety remain unverified. For example, a u8 value returned
 with `ret.i32` can pass depth checks. The shared structural validator is run
 before output, but its documented limitations still apply. The separate
 `cvm-run` interpreter detects these cases when they execute; it does not
-provide a pre-execution semantic verifier. Runtime services, DEBUG generation,
-disassembly, SmallC integration, and an execution-safety guarantee are not
-included. See [Interpreter usage and scope](INTERPRETER.md).
+provide a pre-execution semantic verifier. Runtime services are implemented
+by `cvm-run`; DEBUG generation, disassembly, SmallC integration, and an
+execution-safety guarantee are not included. See
+[Interpreter usage and scope](INTERPRETER.md).
 
 ## Reusable binary file adapter
 

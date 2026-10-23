@@ -13,7 +13,8 @@ headers, native shims, or build-time dependency on the CVM source tree.
 - `CVM.Opcode` publishes the complete opcode-number set, validity and operand
   width/kind queries, mnemonic names, and human-readable operand schemas.
 - `CVM.Service` publishes the v1 service IDs, assembly names and parameter/
-  result counts. These are metadata, not implemented runtime services.
+  result counts. The installable `cvmrun` package implements these contracts
+  through public CWhip SDK APIs; the metadata remains canonical.
 - `CVM.ByteReader` reads u8/u16/u32/i32 values in little-endian order from a
   CWhip `buffer`. Reads past the input set `TRUNCATED` and preserve the first
   failing byte offset. `seek`, `offset`, `errorCode`, and `errorOffset`

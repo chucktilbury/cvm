@@ -9,12 +9,41 @@ start {
         Sys.StandardIO().writeErrorLine(loaded.error())
         Sys.Process().exit(3)
     }
+    VM.VirtualMachine machine = VM.VirtualMachine()
     VM.ExecutionResult result = null
-    if (Sys.Process().argc() == 3 && Sys.Process().arg(2).equals("steps")) {
-        VM.Limits limits = VM.Limits(16777216, 1, 65536, 256, 16777216)
-        result = VM.VirtualMachine().run(loaded.bytes(), limits)
+    String mode = ""
+    if (Sys.Process().argc() == 3) { mode = Sys.Process().arg(2) }
+    if (mode.equals("repeat")) {
+        int before = Sys.FileSystem().listDir("/proc/self/fd").length
+        int iteration = 0
+        while (iteration < 5) {
+            result = machine.run(loaded.bytes())
+            iteration = iteration + 1
+        }
+        int after = Sys.FileSystem().listDir("/proc/self/fd").length
+        if (before != after) { Sys.Process().exit(5) }
     } else {
-        result = VM.VirtualMachine().run(loaded.bytes())
+        if (mode.equals("steps")) {
+        VM.Limits limits = VM.Limits(16777216, 1, 65536, 256, 16777216)
+            result = machine.run(loaded.bytes(), limits)
+        } else {
+            if (mode.equals("no-stdout")) {
+                result = machine.run(loaded.bytes(), VM.Limits(),
+                    VM.Capabilities(true, false, true, 64))
+            } else {
+                if (mode.equals("no-files")) {
+                    result = machine.run(loaded.bytes(), VM.Limits(),
+                        VM.Capabilities(true, true, false, 64))
+                } else {
+                    if (mode.equals("zero-files")) {
+                        result = machine.run(loaded.bytes(), VM.Limits(),
+                            VM.Capabilities(true, true, true, 0))
+                    } else {
+                        result = machine.run(loaded.bytes())
+                    }
+                }
+            }
+        }
     }
     if (!result.ok()) {
         Sys.StandardIO().writeErrorLine(format("{}:{}:{}:{}",
