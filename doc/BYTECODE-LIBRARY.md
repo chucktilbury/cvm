@@ -14,7 +14,11 @@ headers, native shims, or build-time dependency on the CVM source tree.
   width/kind queries, mnemonic names, and human-readable operand schemas.
 - `CVM.Service` publishes the v1 service IDs, assembly names and parameter/
   result counts. The installable `cvmrun` package implements these contracts
-  through public CWhip SDK APIs; the metadata remains canonical.
+  through public CWhip SDK APIs; the metadata remains canonical. IDs 0..8
+  retain their original ABI; `FILE_OPEN` (9), `FILE_READ_HANDLE` (10),
+  `FILE_WRITE_HANDLE` (11), and `FILE_CLOSE_HANDLE` (12) add integer file
+  descriptors with exact signatures in the
+  [service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-io-boundary).
 - `CVM.ByteReader` reads u8/u16/u32/i32 values in little-endian order from a
   CWhip `buffer`. Reads past the input set `TRUNCATED` and preserve the first
   failing byte offset. `seek`, `offset`, `errorCode`, and `errorOffset`

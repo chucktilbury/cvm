@@ -236,7 +236,8 @@ jz done
 call nothing
 """
         services = ["stdout_i32", "stdout_byte", "stdout_write", "stdin_byte",
-                    "file_open_read", "file_open_write", "file_read", "file_write", "file_close"]
+                    "file_open_read", "file_open_write", "file_read", "file_write", "file_close",
+                    "file_open", "file_read_handle", "file_write_handle", "file_close_handle"]
         source += "".join(f"sys {name}\n" for name in services)
         source += """done:
 ret.i32
@@ -260,10 +261,10 @@ ret.file
             "06 00 00 07 00 00 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 "
             "14 15 16 17 18 19 1a"
         )
-        end = len(prefix) + 5 + 5 + 3 + 18
+        end = len(prefix) + 5 + 5 + 3 + 26
         expected = prefix + b"\x1b" + struct.pack("<I", end)
         expected += b"\x1c" + struct.pack("<I", end) + b"\x1d\1\0"
-        expected += b"".join(bytes([0x21, value]) for value in range(9))
+        expected += b"".join(bytes([0x21, value]) for value in range(13))
         expected += bytes.fromhex("1f 1e 03 00 00 20 03 00 00 22")
         self.assertEqual(code, expected)
 
@@ -340,6 +341,36 @@ ret
         funcs = sections(self.assemble(source))[2]
         self.assertEqual([struct.unpack_from("<H", funcs, i * 28 + 20)[0]
                           for i in range(9)], [1, 1, 1, 1, 4, 4, 1, 1, 0])
+        integer_source = PREAMBLE + """.array bytes: u8[8]
+.func main() -> i32
+array bytes
+array bytes
+sys file_open
+ret.i32
+.end
+.func read(h:i32) -> i32
+ldloc h
+array bytes
+const.i32 8
+sys file_read_handle
+ret.i32
+.end
+.func write(h:i32) -> i32
+ldloc h
+array bytes
+const.i32 8
+sys file_write_handle
+ret.i32
+.end
+.func close(h:i32) -> void
+ldloc h
+sys file_close_handle
+ret
+.end
+"""
+        funcs = sections(self.assemble(integer_source))[2]
+        self.assertEqual([struct.unpack_from("<H", funcs, i * 28 + 20)[0]
+                          for i in range(4)], [2, 3, 3, 1])
         # A matching depth is not proof of a matching guest value type.
         self.assemble(MINIMAL.replace("const.i32 42", "const.u8 42"))
 

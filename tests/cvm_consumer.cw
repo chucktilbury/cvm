@@ -47,14 +47,18 @@ start {
         opcodeNumber = opcodeNumber + 1
     }
     CVM.Service services = CVM.Service()
-    list arities = [1, 1, 3, 0, 1, 1, 4, 4, 1]
-    list results = [0, 0, 1, 1, 1, 1, 1, 1, 0]
+    list arities = [1, 1, 3, 0, 1, 1, 4, 4, 1, 2, 3, 3, 1]
+    list results = [0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0]
     int service = 0
-    while (service <= CVM.Service.FILE_CLOSE) {
+    while (service <= CVM.Service.FILE_CLOSE_HANDLE) {
         if (services.name(service).length == 0 || services.parameterCount(service) != (arities[service] as int) || services.resultCount(service) != (results[service] as int)) { Sys.Process().exit(25) }
+        CVM.InstructionBuilder serviceInstruction = CVM.InstructionBuilder()
+        if (!serviceInstruction.emit(CVM.Opcode.SYS, service)) { Sys.Process().exit(27) }
         service = service + 1
     }
-    if (!services.name(-1).equals("") || !services.name(9).equals("") || services.parameterCount(9) != -1 || services.resultCount(-1) != -1) { Sys.Process().exit(26) }
+    if (!services.name(-1).equals("") || !services.name(13).equals("") || services.parameterCount(13) != -1 || services.resultCount(-1) != -1) { Sys.Process().exit(26) }
+    CVM.InstructionBuilder invalidService = CVM.InstructionBuilder()
+    if (invalidService.emit(CVM.Opcode.SYS, 13)) { Sys.Process().exit(28) }
 
     buffer allBytes = buffer[]
     int byteValue = 0

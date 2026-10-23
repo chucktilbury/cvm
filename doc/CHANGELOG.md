@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add backward-compatible integer file services 9..12: `file_open` with
+  exact binary `r`/`w`/`a` modes, bounded index-zero `file_read_handle` and
+  `file_write_handle` returning actual progress, and `file_close_handle`.
+  Preserve services 0..8 and opaque file values, share host limits/cleanup,
+  reject stale handles without recycling IDs, and publish metadata,
+  SmallC lowering instructions and installed CLI/API conformance coverage.
 - Implement all nine v1 host services in `cvmrun` using public CWhip byte,
   file, and standard-I/O APIs. Add host capability settings, an open-file
   limit, structured I/O/configuration errors, deterministic cleanup and

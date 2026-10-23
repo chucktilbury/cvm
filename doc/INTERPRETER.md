@@ -24,7 +24,7 @@ categories and fields in `CVMRun.ExecutionResult`.
 
 ## Execution scope
 
-The interpreter executes every v1 opcode and all nine specified host services:
+The interpreter executes every v1 opcode and all thirteen specified host services:
 
 - Constants, typed scalar locals and globals, zero/initialized global and
   frame-local arrays, array length/load/store, and checked array bounds.
@@ -55,6 +55,16 @@ errors are distinct `IO_ERROR` results, never EOF or fake handles. Invalid,
 stale, closed, or foreign file IDs trap. Handles are unique within a VM
 instance; open handles are closed after normal return and after runtime or
 service failure. Cleanup errors do not replace a primary failure.
+
+Services 9..12 add integer descriptors without changing opaque `file`
+services 4..8. See the [canonical service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-io-boundary)
+for exact signatures, zero-length semantics and descriptor scope.
+`file_open` accepts only NUL-terminated `r`, `w`, or `a` and always uses binary
+I/O. `a` creates a missing file or preserves existing bytes and appends.
+`file_read_handle`/`file_write_handle` use buffer index zero, never an offset.
+The byte length must fit the fixed u8 array. An integer descriptor can pass
+through ordinary i32 locals, globals, parameters and returns; it cannot be
+used as an opaque `file`, or retained for another run.
 
 **Compatibility:** earlier `cvmrun` builds trapped every `sys` instruction as
 `UNSUPPORTED_SERVICE`. This version deliberately enables the specified
@@ -118,6 +128,42 @@ instances. This deterministic budget is not an estimate of exact host
 allocator overhead. Container bytes, stack/local values and call frames have
 separate limits.
 
+## Integer-file reproduction and SmallC lowering
+
+From a built checkout, this fixture opens `integer-files.bin` with mode `w`,
+writes the first three payload bytes (NUL, 128, 255), closes the descriptor,
+and returns the actual progress count:
+
+```sh
+bin/cvm-as tests/fixtures/integer-files.asm -o build/integer-files.cvm
+(cd build && ../bin/cvm-run integer-files.cvm)
+# result: 3
+od -An -tu1 build/integer-files.bin
+# 0 128 255
+```
+
+The fixture is also exercised by the public assembler-to-runner suite. Its
+regular-file three-byte write normally completes at once; applications must
+still handle short positive progress for general host files.
+
+The intended C-like pseudo-functions lower as follows (these are frontend
+intrinsics, not new CVM guest function types):
+
+| Frontend API | Left-to-right VM arguments | Service |
+|---|---|---|
+| `void print(char[])` | u8 ArrayRef, offset 0, length before first NUL | `stdout_write` (2); consume/retry actual progress |
+| `int open(char[] path, char[] mode)` | path ArrayRef, mode ArrayRef | `file_open` (9) |
+| `int read(int h, int n, char[] buf)` | h, buf ArrayRef, n | `file_read_handle` (10) |
+| `int write(int h, int n, char[] buf)` | h, buf ArrayRef, n | `file_write_handle` (11) |
+| `close(int h)` | h | `file_close_handle` (12), void result |
+
+In particular the frontend's `(h, n, buf)` order must be reordered to
+`(h, buf, n)` for the VM. Reads/writes use the requested byte length, not a
+NUL scan: binary payloads can contain any byte. No integer-to-opaque-file
+conversion or general guest array-parameter support is needed. A print
+intrinsic must not leave `stdout_write`'s count on the stack when its
+frontend return type is void.
+
 ## Public API
 
 Import `cvmrun` as `CVMRun`. `CVMRun.VirtualMachine().run(buffer)` uses default
@@ -150,3 +196,11 @@ and the existing opcode/runtime regression cases. Linux-specific
 `/proc/self/mem`, `/dev/full`, and descriptor-cleanup fixtures are platform
 gated. The suite also compiles an installed-package consumer that exercises
 the in-memory VM API and repeated-run cleanup.
+Integer-service cases additionally cover exact modes, append/create/truncate,
+all 256 bytes including invalid UTF-8, bounded and short reads, untouched
+buffer suffixes, zero requests, wrong access modes, double close and
+close/reopen non-aliasing, mixed opaque/integer open-file limits, repeated-run
+registry isolation, and cleanup after service and arithmetic traps.
+Regular-file writes do not portably force a successful short write, and
+exhausting 2,147,483,647 issued tokens is not a practical conformance fixture;
+those paths are checked in the runtime's progress and pre-open range guards.

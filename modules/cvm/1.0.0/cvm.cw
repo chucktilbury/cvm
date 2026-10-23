@@ -100,7 +100,7 @@ namespace CVM {
         String operandSchema(int opcode) {
             if (opcode == CONST_I32) { return "i32" }
             if (opcode == CONST_U8) { return "u8 value" }
-            if (opcode == SYS) { return "u8 service number (0..8)" }
+            if (opcode == SYS) { return "u8 service number (0..12)" }
             if (opcode == LDLOC || opcode == STLOC) { return "u16 local index" }
             if (opcode == LDGLOBAL || opcode == STGLOBAL) { return "u16 global index" }
             if (opcode == ARRAY) { return "u16 array index" }
@@ -176,7 +176,9 @@ namespace CVM {
         enum {
             STDOUT_I32 = 0, STDOUT_BYTE = 1, STDOUT_WRITE = 2,
             STDIN_BYTE = 3, FILE_OPEN_READ = 4, FILE_OPEN_WRITE = 5,
-            FILE_READ = 6, FILE_WRITE = 7, FILE_CLOSE = 8
+            FILE_READ = 6, FILE_WRITE = 7, FILE_CLOSE = 8,
+            FILE_OPEN = 9, FILE_READ_HANDLE = 10, FILE_WRITE_HANDLE = 11,
+            FILE_CLOSE_HANDLE = 12
         }
 
         String name(int id) {
@@ -189,11 +191,18 @@ namespace CVM {
             if (id == FILE_READ) { return "file_read" }
             if (id == FILE_WRITE) { return "file_write" }
             if (id == FILE_CLOSE) { return "file_close" }
+            if (id == FILE_OPEN) { return "file_open" }
+            if (id == FILE_READ_HANDLE) { return "file_read_handle" }
+            if (id == FILE_WRITE_HANDLE) { return "file_write_handle" }
+            if (id == FILE_CLOSE_HANDLE) { return "file_close_handle" }
             return ""
         }
 
         int parameterCount(int id) {
             if (id == STDOUT_WRITE) { return 3 }
+            if (id == FILE_OPEN) { return 2 }
+            if (id == FILE_READ_HANDLE || id == FILE_WRITE_HANDLE) { return 3 }
+            if (id == FILE_CLOSE_HANDLE) { return 1 }
             if (id == FILE_READ || id == FILE_WRITE) { return 4 }
             if (id == STDIN_BYTE) { return 0 }
             if (id >= STDOUT_I32 && id <= FILE_CLOSE) { return 1 }
@@ -201,8 +210,9 @@ namespace CVM {
         }
 
         int resultCount(int id) {
-            if (id < STDOUT_I32 || id > FILE_CLOSE) { return -1 }
-            if (id == STDOUT_I32 || id == STDOUT_BYTE || id == FILE_CLOSE) { return 0 }
+            if (id < STDOUT_I32 || id > FILE_CLOSE_HANDLE) { return -1 }
+            if (id == STDOUT_I32 || id == STDOUT_BYTE || id == FILE_CLOSE ||
+                id == FILE_CLOSE_HANDLE) { return 0 }
             return 1
         }
     }
@@ -478,7 +488,7 @@ namespace CVM {
             int kind = schema.operandKind(opcode)
             if (width == 0) { return fail(INVALID_INSTRUCTION, "opcode has no operand") }
             if (kind == 1 && (operand < -2147483648 || operand > 2147483647)) { return fail(INVALID_VALUE, "i32 operand out of range") }
-            if (kind == 2 && (operand < 0 || operand > 255 || (opcode == Opcode.SYS && operand > 8))) { return fail(INVALID_VALUE, "u8 operand out of range") }
+            if (kind == 2 && (operand < 0 || operand > 255 || (opcode == Opcode.SYS && operand > Service.FILE_CLOSE_HANDLE))) { return fail(INVALID_VALUE, "u8 operand out of range") }
             if ((kind == 3 || kind == 4 || kind == 5 || kind == 7) && (operand < 0 || operand > 65535)) { return fail(INVALID_VALUE, "u16 operand out of range") }
             if (kind == 6 && (operand < 0 || operand > 4294967295)) { return fail(INVALID_VALUE, "branch target out of range") }
             _code.append(opcode)
@@ -972,7 +982,7 @@ namespace CVM {
                     if (width == 1) { operand = reader.readU8() }
                     if (width == 2) { operand = reader.readU16() }
                     if (width == 4) { operand = reader.readU32() }
-                    if (kind == 2 && opcode == Opcode.SYS && operand > 8) { return reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "unknown service number") }
+                    if (kind == 2 && opcode == Opcode.SYS && operand > Service.FILE_CLOSE_HANDLE) { return reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "unknown service number") }
                     if ((kind == 3 && operand >= slots) || (kind == 4 && operand >= globals.count()) || (kind == 5 && operand >= arrays.count()) || (kind == 7 && operand >= functions.count())) { return reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "instruction index is invalid") }
                     if (kind == 6) {
                         if (operand >= codeLength) { return reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "branch target outside function") }
