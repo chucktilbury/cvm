@@ -52,6 +52,24 @@ breaks. Python 3.11+ (`tomllib`) is required only when reading an existing
 settings file; `scripts/setup` uses `python3`, while direct CMake configuration
 uses CMake's Python3 interpreter discovery.
 
+The Cwhip installer also registers application defaults in the same file:
+
+```toml
+[applications]
+install_prefix = "/absolute/path/to/installed/sdk"
+build_type = "Release"
+```
+
+These values describe the actual Cwhip installation prefix and the build
+configuration used to produce that SDK. CVM calls the SDK's
+`cwhip_apply_application_defaults()` helper immediately after finding Cwhip.
+The helper provides defaults for `CMAKE_INSTALL_PREFIX` and
+`CMAKE_BUILD_TYPE`; explicit command-line values and values already stored in
+the build cache take precedence. CVM does not edit `sdk.toml`, share the SDK's
+build directory, or add arbitrary compiler flags. `cmake --install --prefix`
+can still select a one-off installation location, and `DESTDIR` stages an
+installation without changing the registered prefix.
+
 To temporarily override the shared setting:
 
 ```sh
@@ -81,11 +99,13 @@ The template never edits user settings or copies the SDK into the project.
 ## Configure and build
 
 The setup script configures the `build/` directory and launches an interactive
-project shell there. Its build type argument is optional:
+project shell there. An explicit build type overrides the SDK and cache; when
+omitted, CVM leaves `CMAKE_BUILD_TYPE` unset on the CMake command line so the
+SDK helper or existing build cache can provide it:
 
 | Argument | CMake build type |
 | --- | --- |
-| `debug` (default) | `Debug` |
+| `debug` | `Debug` |
 | `release` | `Release` |
 | `profile` | `RelWithDebInfo` |
 

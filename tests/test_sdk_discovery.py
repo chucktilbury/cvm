@@ -42,7 +42,10 @@ class SdkDiscoveryTests(unittest.TestCase):
         tools.mkdir()
         shell = tools / "bash"
         shell.write_text(
-            '#!/bin/sh\nprintf "%s" "${CWHIP_SDK-}" > "$SHELL_RECORD"\n'
+            '#!/bin/sh\n'
+            'printf "%s" "${CWHIP_SDK-}" > "$SHELL_RECORD"\n'
+            'printf "%s|%s" "${_BUILD_TYPE-}" "${CWHIP_BUILD_TYPE-}" '
+            '> "$SHELL_BUILD_TYPE_RECORD"\n'
         )
         shell.chmod(0o755)
         generator = tools / "cparsegen"
@@ -50,16 +53,38 @@ class SdkDiscoveryTests(unittest.TestCase):
         generator.chmod(0o755)
         self.env["PATH"] = f"{tools}:{self.env['PATH']}"
         self.env["SHELL_RECORD"] = str(self.shell_record)
+        self.env["SHELL_BUILD_TYPE_RECORD"] = str(self.root / "shell-build-type.txt")
 
-    def make_sdk(self, name):
+    def make_sdk(
+        self, name, application_install_prefix=None, application_build_type=None
+    ):
         prefix = self.root / name
         package = prefix / "lib/cmake/Cwhip"
         package.mkdir(parents=True)
+        helper = [
+            "function(cwhip_apply_application_defaults)",
+        ]
+        if application_install_prefix is not None:
+            helper.extend((
+                "    if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)",
+                f'        set(CMAKE_INSTALL_PREFIX {json.dumps(str(application_install_prefix))} '
+                'CACHE PATH "" FORCE)',
+                "    endif()",
+            ))
+        if application_build_type is not None:
+            helper.extend((
+                '    if(CMAKE_BUILD_TYPE STREQUAL "")',
+                f'        set(CMAKE_BUILD_TYPE "{application_build_type}" CACHE STRING "" FORCE)',
+                "    endif()",
+            ))
+        helper.extend(("endfunction()", ""))
+        (package / "CwhipApplicationDefaults.cmake").write_text("\n".join(helper))
         (package / "CwhipConfig.cmake").write_text(
             'get_filename_component(prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)\n'
             'file(WRITE "${CMAKE_BINARY_DIR}/selected-sdk.txt" "${prefix}")\n'
             'set(Cwhip_APPLICATION_OUTPUT_DIRECTORIES TRUE)\n'
             'set(Cwhip_MODULE_DIR "${prefix}/share/cwhip/modules")\n'
+            'include("${CMAKE_CURRENT_LIST_DIR}/CwhipApplicationDefaults.cmake")\n'
             'function(cwhip_add_program name)\n'
             '    add_custom_target("${name}")\n'
             '    set_target_properties("${name}" PROPERTIES\n'
@@ -412,14 +437,85 @@ class SdkDiscoveryTests(unittest.TestCase):
         self.assertIn("lacks public File binary APIs", self.run_configure(success=False))
 
     def test_setup_exports_settings_prefix_and_build_type(self):
-        prefix = self.make_sdk('setup SDK "quotes" ')
+        prefix = self.make_sdk(
+            'setup SDK "quotes" ',
+            application_build_type="RelWithDebInfo",
+        )
         self.select(prefix)
         before = self.settings.read_bytes()
         self.run_configure(setup=True, extra=("release",))
         self.assert_selected(prefix)
         self.assertEqual(self.shell_record.read_text(), str(prefix))
         self.assertIn("CMAKE_BUILD_TYPE:STRING=Release", (self.build / "CMakeCache.txt").read_text())
+        self.assertEqual(
+            (self.root / "shell-build-type.txt").read_text(), "release|Release"
+        )
         self.assertEqual(self.settings.read_bytes(), before)
+
+    def test_setup_inherits_sdk_defaults_without_passing_implicit_debug(self):
+        install_prefix = self.root / "registered application install"
+        prefix = self.make_sdk(
+            "defaults-sdk",
+            application_install_prefix=install_prefix,
+            application_build_type="RelWithDebInfo",
+        )
+        self.select_sdk(prefix)
+        self.run_configure(setup=True)
+        cache = (self.build / "CMakeCache.txt").read_text()
+        self.assertIn(f"CMAKE_INSTALL_PREFIX:PATH={install_prefix}", cache)
+        self.assertIn("CMAKE_BUILD_TYPE:STRING=RelWithDebInfo", cache)
+        self.assertEqual(
+            (self.root / "shell-build-type.txt").read_text(),
+            "profile|RelWithDebInfo",
+        )
+
+    def test_cli_and_existing_cache_application_settings_win(self):
+        install_prefix = self.root / "registered install"
+        sdk = self.make_sdk(
+            "defaults-sdk",
+            application_install_prefix=install_prefix,
+            application_build_type="RelWithDebInfo",
+        )
+        self.select_sdk(sdk)
+        cli_install_prefix = self.root / "explicit install"
+        self.run_configure(extra=(
+            f"-DCMAKE_INSTALL_PREFIX:PATH={cli_install_prefix}",
+            "-DCMAKE_BUILD_TYPE:STRING=Debug",
+        ))
+        cache = (self.build / "CMakeCache.txt").read_text()
+        self.assertIn(f"CMAKE_INSTALL_PREFIX:PATH={cli_install_prefix}", cache)
+        self.assertIn("CMAKE_BUILD_TYPE:STRING=Debug", cache)
+        self.run_configure(setup=True)
+        cache = (self.build / "CMakeCache.txt").read_text()
+        self.assertIn(f"CMAKE_INSTALL_PREFIX:PATH={cli_install_prefix}", cache)
+        self.assertIn("CMAKE_BUILD_TYPE:STRING=Debug", cache)
+        self.assertEqual((self.root / "shell-build-type.txt").read_text(), "debug|Debug")
+
+    def test_destdir_stages_install_under_inherited_prefix(self):
+        install_prefix = self.root / "registered install"
+        sdk = self.make_sdk(
+            "defaults-sdk",
+            application_install_prefix=install_prefix,
+        )
+        self.select_sdk(sdk)
+        self.run_configure()
+        (self.project / "bin").mkdir()
+        (self.build / "hello").write_text("fixture\n")
+        for name in ("cvm-as", "cvm-run"):
+            (self.project / "bin" / name).write_text("fixture\n")
+        staging = self.root / "staging"
+        install_env = dict(self.env, DESTDIR=str(staging))
+        result = subprocess.run(
+            ["cmake", "--install", str(self.build)],
+            cwd=self.root, env=install_env, capture_output=True, text=True,
+            timeout=60,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        staged_prefix = staging / str(install_prefix).lstrip("/")
+        self.assertTrue((staged_prefix / "bin/hello").is_file())
+        self.assertTrue(
+            (staged_prefix / "share/cwhip/modules/cvm/1.0.0/cvm.cw").is_file()
+        )
 
     def test_setup_real_shell_adds_dedicated_sdk_to_path(self):
         prefix = self.make_sdk('shell SDK with "quotes"')
@@ -448,6 +544,7 @@ class SdkDiscoveryTests(unittest.TestCase):
         self.run_configure(setup=True)
         self.assert_selected(self.fallback)
         self.assertEqual(self.shell_record.read_text(), "")
+        self.assertEqual((self.root / "shell-build-type.txt").read_text(), "default|")
         self.assertFalse(self.settings.exists())
 
     def test_setup_missing_key_preserves_discovery(self):

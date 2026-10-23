@@ -2,24 +2,6 @@ cmake_minimum_required(VERSION 3.24)
 project(cvm LANGUAGES C)
 include(CTest)
 
-set(CWHIP_BIN_DIR "${PROJECT_SOURCE_DIR}/bin" CACHE PATH
-    "Directory for project executables")
-set(CWHIP_LIB_DIR "${PROJECT_SOURCE_DIR}/lib" CACHE PATH
-    "Directory for project libraries and archives")
-get_filename_component(CWHIP_BIN_DIR "${CWHIP_BIN_DIR}" ABSOLUTE
-    BASE_DIR "${PROJECT_SOURCE_DIR}")
-get_filename_component(CWHIP_LIB_DIR "${CWHIP_LIB_DIR}" ABSOLUTE
-    BASE_DIR "${PROJECT_SOURCE_DIR}")
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CWHIP_BIN_DIR}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CWHIP_LIB_DIR}")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CWHIP_LIB_DIR}")
-foreach(configuration DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${configuration} "${CWHIP_BIN_DIR}")
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${configuration} "${CWHIP_LIB_DIR}")
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${configuration} "${CWHIP_LIB_DIR}")
-endforeach()
-
 set(cwhip_sdk_prefix "$ENV{CWHIP_SDK}")
 if(cwhip_sdk_prefix STREQUAL "")
     set(cwhip_config_home "$ENV{XDG_CONFIG_HOME}")
@@ -64,6 +46,26 @@ if(NOT cwhip_sdk_prefix STREQUAL "")
 else()
     find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED)
 endif()
+
+cwhip_apply_application_defaults()
+
+set(CWHIP_BIN_DIR "${PROJECT_SOURCE_DIR}/bin" CACHE PATH
+    "Directory for project executables")
+set(CWHIP_LIB_DIR "${PROJECT_SOURCE_DIR}/lib" CACHE PATH
+    "Directory for project libraries and archives")
+get_filename_component(CWHIP_BIN_DIR "${CWHIP_BIN_DIR}" ABSOLUTE
+    BASE_DIR "${PROJECT_SOURCE_DIR}")
+get_filename_component(CWHIP_LIB_DIR "${CWHIP_LIB_DIR}" ABSOLUTE
+    BASE_DIR "${PROJECT_SOURCE_DIR}")
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CWHIP_BIN_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CWHIP_LIB_DIR}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CWHIP_LIB_DIR}")
+foreach(configuration DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${configuration} "${CWHIP_BIN_DIR}")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${configuration} "${CWHIP_LIB_DIR}")
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${configuration} "${CWHIP_LIB_DIR}")
+endforeach()
 
 if(NOT Cwhip_APPLICATION_OUTPUT_DIRECTORIES)
     message(FATAL_ERROR
