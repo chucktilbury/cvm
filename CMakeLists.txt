@@ -1,6 +1,4 @@
 cmake_minimum_required(VERSION 3.24)
-project(cvm LANGUAGES C)
-include(CTest)
 
 set(cwhip_sdk_prefix "$ENV{CWHIP_SDK}")
 if(cwhip_sdk_prefix STREQUAL "")
@@ -26,7 +24,7 @@ if(cwhip_sdk_prefix STREQUAL "")
             find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
             execute_process(
                 COMMAND "${Python3_EXECUTABLE}"
-                    "${PROJECT_SOURCE_DIR}/scripts/sdk-prefix.py" "${cwhip_settings}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/scripts/sdk-prefix.py" "${cwhip_settings}"
                 RESULT_VARIABLE cwhip_settings_result
                 OUTPUT_VARIABLE cwhip_sdk_prefix
                 ERROR_VARIABLE cwhip_settings_error)
@@ -48,6 +46,9 @@ else()
 endif()
 
 cwhip_apply_application_defaults()
+
+project(cvm LANGUAGES C)
+include(CTest)
 
 set(CWHIP_BIN_DIR "${PROJECT_SOURCE_DIR}/bin" CACHE PATH
     "Directory for project executables")

@@ -31,7 +31,8 @@ class SdkDiscoveryTests(unittest.TestCase):
         self.env = os.environ.copy()
         for name in (
             "CWHIP_SDK", "CMAKE_PREFIX_PATH", "Cwhip_DIR", "Cwhip_ROOT",
-            "_PROJECT_NAME", "XDG_CONFIG_HOME",
+            "_PROJECT_NAME", "XDG_CONFIG_HOME", "CMAKE_INSTALL_PREFIX",
+            "CMAKE_BUILD_TYPE",
         ):
             self.env.pop(name, None)
         self.env["HOME"] = str(self.home)
@@ -66,15 +67,26 @@ class SdkDiscoveryTests(unittest.TestCase):
         ]
         if application_install_prefix is not None:
             helper.extend((
-                "    if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)",
-                f'        set(CMAKE_INSTALL_PREFIX {json.dumps(str(application_install_prefix))} '
-                'CACHE PATH "" FORCE)',
+                "    if(NOT DEFINED CACHE{CMAKE_INSTALL_PREFIX})",
+                '        if(DEFINED ENV{CMAKE_INSTALL_PREFIX} AND '
+                'NOT "$ENV{CMAKE_INSTALL_PREFIX}" STREQUAL "")',
+                '            set(default_install_prefix "$ENV{CMAKE_INSTALL_PREFIX}")',
+                "        else()",
+                f'            set(default_install_prefix {json.dumps(str(application_install_prefix))})',
+                "        endif()",
+                '        set(CMAKE_INSTALL_PREFIX "${default_install_prefix}" CACHE PATH "" FORCE)',
                 "    endif()",
             ))
         if application_build_type is not None:
             helper.extend((
-                '    if(CMAKE_BUILD_TYPE STREQUAL "")',
-                f'        set(CMAKE_BUILD_TYPE "{application_build_type}" CACHE STRING "" FORCE)',
+                "    if(NOT DEFINED CACHE{CMAKE_BUILD_TYPE})",
+                '        if(DEFINED ENV{CMAKE_BUILD_TYPE} AND '
+                'NOT "$ENV{CMAKE_BUILD_TYPE}" STREQUAL "")',
+                '            set(default_build_type "$ENV{CMAKE_BUILD_TYPE}")',
+                "        else()",
+                f'            set(default_build_type "{application_build_type}")',
+                "        endif()",
+                '        set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "" FORCE)',
                 "    endif()",
             ))
         helper.extend(("endfunction()", ""))
@@ -490,6 +502,49 @@ class SdkDiscoveryTests(unittest.TestCase):
         self.assertIn(f"CMAKE_INSTALL_PREFIX:PATH={cli_install_prefix}", cache)
         self.assertIn("CMAKE_BUILD_TYPE:STRING=Debug", cache)
         self.assertEqual((self.root / "shell-build-type.txt").read_text(), "debug|Debug")
+
+    def test_explicit_empty_build_type_is_preserved(self):
+        sdk = self.make_sdk(
+            "defaults-sdk",
+            application_build_type="RelWithDebInfo",
+        )
+        self.select_sdk(sdk)
+        self.run_configure(extra=(
+            "-DCMAKE_INSTALL_PREFIX:PATH=/usr/local",
+            "-DCMAKE_BUILD_TYPE:STRING=",
+        ))
+        cache = (self.build / "CMakeCache.txt").read_text()
+        self.assertIn("CMAKE_INSTALL_PREFIX:PATH=/usr/local", cache)
+        self.assertIn("CMAKE_BUILD_TYPE:STRING=\n", cache)
+        self.run_configure(setup=True)
+        cache = (self.build / "CMakeCache.txt").read_text()
+        self.assertIn("CMAKE_INSTALL_PREFIX:PATH=/usr/local", cache)
+        self.assertIn("CMAKE_BUILD_TYPE:STRING=\n", cache)
+        self.assertEqual((self.root / "shell-build-type.txt").read_text(), "default|")
+
+    def test_install_prefix_environment_override_wins(self):
+        install_prefix = self.root / "registered install"
+        sdk = self.make_sdk(
+            "defaults-sdk",
+            application_install_prefix=install_prefix,
+        )
+        self.select_sdk(sdk)
+        environment_prefix = self.root / "environment install"
+        self.env["CMAKE_INSTALL_PREFIX"] = str(environment_prefix)
+        self.run_configure()
+        cache = (self.build / "CMakeCache.txt").read_text()
+        self.assertIn(f"CMAKE_INSTALL_PREFIX:PATH={environment_prefix}", cache)
+
+    def test_build_type_environment_override_wins(self):
+        sdk = self.make_sdk(
+            "defaults-sdk",
+            application_build_type="RelWithDebInfo",
+        )
+        self.select_sdk(sdk)
+        self.env["CMAKE_BUILD_TYPE"] = "Debug"
+        self.run_configure()
+        cache = (self.build / "CMakeCache.txt").read_text()
+        self.assertIn("CMAKE_BUILD_TYPE:STRING=Debug", cache)
 
     def test_destdir_stages_install_under_inherited_prefix(self):
         install_prefix = self.root / "registered install"
