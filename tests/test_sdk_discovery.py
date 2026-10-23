@@ -93,6 +93,7 @@ class SdkDiscoveryTests(unittest.TestCase):
         (package / "CwhipApplicationDefaults.cmake").write_text("\n".join(helper))
         (package / "CwhipConfig.cmake").write_text(
             'get_filename_component(prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)\n'
+            'set(Cwhip_PREFIX "${prefix}")\n'
             'file(WRITE "${CMAKE_BINARY_DIR}/selected-sdk.txt" "${prefix}")\n'
             'set(Cwhip_APPLICATION_OUTPUT_DIRECTORIES TRUE)\n'
             'set(Cwhip_MODULE_DIR "${prefix}/share/cwhip/modules")\n'
@@ -447,6 +448,23 @@ class SdkDiscoveryTests(unittest.TestCase):
         api = self.fallback / "share/cwhip/modules/system/0.1.0/system.cw"
         api.write_text("String readAll()\nint write(String data)\n")
         self.assertIn("lacks public File binary APIs", self.run_configure(success=False))
+
+    def test_old_sdk_without_application_defaults_has_actionable_diagnostic(self):
+        package = self.fallback / "lib/cmake/Cwhip/CwhipConfig.cmake"
+        package.write_text(package.read_text().replace(
+            'include("${CMAKE_CURRENT_LIST_DIR}/CwhipApplicationDefaults.cmake")\n',
+            "",
+        ))
+        for setup in (False, True):
+            with self.subTest(setup=setup):
+                output = self.run_configure(setup=setup, success=False)
+                output = " ".join(output.split())
+                self.assertIn(str(self.fallback), output)
+                self.assertIn("missing application-defaults", output)
+                self.assertIn("cwhip_apply_application_defaults", output)
+                self.assertIn("Rebuild and reinstall", output)
+                self.assertIn("chucktilbury/cwhip#21", output)
+                self.assertNotIn("Unknown CMake command", output)
 
     def test_setup_exports_settings_prefix_and_build_type(self):
         prefix = self.make_sdk(
