@@ -37,13 +37,13 @@ start {
         Sys.Process().exit(0)
     }
     if (mode.equals("repeat")) {
-        int before = Sys.FileSystem().listDir("/proc/self/fd").length
-        int iteration = 0
+        int64 before = Sys.FileSystem().listDir("/proc/self/fd").length
+        int64 iteration = 0
         while (iteration < 5) {
             result = machine.run(loaded.bytes())
             iteration = iteration + 1
         }
-        int after = Sys.FileSystem().listDir("/proc/self/fd").length
+        int64 after = Sys.FileSystem().listDir("/proc/self/fd").length
         if (before != after) { Sys.Process().exit(5) }
     } else {
         if (mode.equals("steps")) {

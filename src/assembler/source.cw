@@ -1,8 +1,8 @@
 class NodeLocation {
     AstNode node
-    int column
-    int offset
-    NodeLocation(AstNode n, int col, int at) { node = n
+    int64 column
+    int64 offset
+    NodeLocation(AstNode n, int64 col, int64 at) { node = n
         offset = at
         column = col }
 }
@@ -12,27 +12,27 @@ class SourceLine {
     list columns
     list locations
     list tokens
-    int cursor
-    int row
+    int64 cursor
+    int64 row
 
-    SourceLine(buffer input, int line) {
+    SourceLine(buffer input, int64 line) {
         row = line
         columns = []
         locations = []
         cursor = 0
         text = ""
-        int quote = 0
+        int64 quote = 0
         bool escaped = false
         bool comment = false
         String hex = "0123456789abcdef"
-        int index = 0
+        int64 index = 0
         while (index < input.length) {
-            int byte = int(input[index])
+            int64 byte = int64(input[index])
             if (byte >= 128 && quote != 0 && !escaped && !comment) {
                 text.append("\\x")
                 text.append(hex.slice(byte / 16, byte / 16 + 1))
                 text.append(hex.slice(byte % 16, byte % 16 + 1))
-                int part = 0
+                int64 part = 0
                 while (part < 4) { columns.append(index + 1)
                     part = part + 1 }
             } else {
@@ -53,26 +53,26 @@ class SourceLine {
         columns.append(input.length + 1)
     }
 
-    int columnAt(int offset) {
+    int64 columnAt(int64 offset) {
         if (offset < 0) { return 1 }
-        if (offset >= columns.length) { return columns[columns.length - 1] as int }
-        return columns[offset] as int
+        if (offset >= columns.length) { return columns[columns.length - 1] as int64 }
+        return columns[offset] as int64
     }
 
     void locate(AstNode node) {
-        int offset = text.length
+        int64 offset = text.length
         if (cursor < tokens.length) { offset = (tokens[cursor] as LexToken).offset }
         locations.append(NodeLocation(node, columnAt(offset), offset))
         if (node.childCount() == 0) { cursor = cursor + 1 }
         else {
-            int index = 0
+            int64 index = 0
             while (index < node.childCount()) { locate(node.childAt(index))
                 index = index + 1 }
         }
     }
 
-    int column(AstNode node) {
-        int index = 0
+    int64 column(AstNode node) {
+        int64 index = 0
         while (index < locations.length) {
             NodeLocation location = locations[index] as NodeLocation
             if (location.node == node) { return location.column }
@@ -82,7 +82,7 @@ class SourceLine {
     }
 
     buffer quoted(AstNode token, Literals literals) {
-        int index = 0
+        int64 index = 0
         while (index < locations.length) {
             NodeLocation location = locations[index] as NodeLocation
             if (location.node == token) {
@@ -98,10 +98,10 @@ class SourceLine {
         raise(AssemblyError("missing literal location", row, 1))
     }
 
-    int scalar(AstNode node, int element, Literals literals) {
+    int64 scalar(AstNode node, int64 element, Literals literals) {
         AstNode token = node.childAt(0)
         if (!token.kind().equals("CHAR")) { return literals.scalar(node, element, row, column(node)) }
-        return int(quoted(token, literals)[0])
+        return int64(quoted(token, literals)[0])
     }
 
     AstNode parse() {
@@ -112,7 +112,7 @@ class SourceLine {
         GeneratedParser parser = GeneratedParser(tokens)
         AstNode root = parser.parseAll()
         if (root == null) {
-            int at = text.length
+            int64 at = text.length
             if (parser.errorPosition >= 0 && parser.errorPosition < tokens.length) { at = (tokens[parser.errorPosition] as LexToken).offset }
             raise(AssemblyError(parser.problem, row, columnAt(at)))
         }
@@ -123,20 +123,20 @@ class SourceLine {
 
 class SourceText {
     void validate(buffer text) {
-        int index = 0
-        int row = 1
-        int col = 1
+        int64 index = 0
+        int64 row = 1
+        int64 col = 1
         while (index < text.length) {
-            int byte = int(text[index])
-            int width = 1
+            int64 byte = int64(text[index])
+            int64 width = 1
             if (byte >= 194 && byte <= 223) { width = 2 }
             else { if (byte >= 224 && byte <= 239) { width = 3 }
             else { if (byte >= 240 && byte <= 244) { width = 4 }
             else { if (byte >= 128 || byte == 0) { raise(AssemblyError("invalid UTF-8 source byte", row, col)) } } } }
             if (index + width > text.length) { raise(AssemblyError("truncated UTF-8 source", row, col)) }
-            int next = 1
+            int64 next = 1
             while (next < width) {
-                int continuation = int(text[index + next])
+                int64 continuation = int64(text[index + next])
                 if (continuation < 128 || continuation > 191 || (next == 1 && ((byte == 224 && continuation < 160) || (byte == 237 && continuation > 159) || (byte == 240 && continuation < 144) || (byte == 244 && continuation > 143)))) { raise(AssemblyError("invalid UTF-8 source", row, col)) }
                 next = next + 1
             }

@@ -95,7 +95,9 @@ class SdkDiscoveryTests(unittest.TestCase):
             'get_filename_component(prefix "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)\n'
             'set(Cwhip_PREFIX "${prefix}")\n'
             'file(WRITE "${CMAKE_BINARY_DIR}/selected-sdk.txt" "${prefix}")\n'
+            'set(Cwhip_SDK_ABI "numeric-v2")\n'
             'set(Cwhip_APPLICATION_OUTPUT_DIRECTORIES TRUE)\n'
+            'set(Cwhip_INCLUDE_DIR "${prefix}/include")\n'
             'set(Cwhip_MODULE_DIR "${prefix}/share/cwhip/modules")\n'
             'include("${CMAKE_CURRENT_LIST_DIR}/CwhipApplicationDefaults.cmake")\n'
             'function(cwhip_add_program name)\n'
@@ -107,10 +109,13 @@ class SdkDiscoveryTests(unittest.TestCase):
         system = prefix / "share/cwhip/modules/system/0.1.0"
         system.mkdir(parents=True)
         (system / "system.cw").write_text(
-            "buffer readBytes(int size)\nbuffer readAllBytes()\nint writeBytes(buffer data)\n"
+            "buffer readBytes(int64 size)\nbuffer readAllBytes()\nint64 writeBytes(buffer data)\n"
         )
+        include = prefix / "include/cwhip"
+        include.mkdir(parents=True)
+        (include / "Stdlib.h").write_text('#define CWHIP_SDK_ABI "numeric-v2"\n')
         (package / "CwhipConfigVersion.cmake").write_text(
-            'set(PACKAGE_VERSION "0.0.1")\n'
+            'set(PACKAGE_VERSION "0.0.2")\n'
             'set(PACKAGE_VERSION_COMPATIBLE TRUE)\n'
             'set(PACKAGE_VERSION_EXACT TRUE)\n'
         )
@@ -263,6 +268,28 @@ class SdkDiscoveryTests(unittest.TestCase):
         self.run_configure(setup=True)
         self.assert_selected(self.fallback)
         self.assertEqual(self.shell_record.read_text(), str(self.fallback))
+
+    def test_selected_sdk_must_report_numeric_v2_in_config_and_header(self):
+        config = self.fallback / "lib/cmake/Cwhip/CwhipConfig.cmake"
+        original = config.read_text()
+        self.env["CWHIP_SDK"] = str(self.fallback)
+
+        config.write_text(original.replace(
+            'set(Cwhip_SDK_ABI "numeric-v2")',
+            'set(Cwhip_SDK_ABI "legacy")',
+        ))
+        self.assertIn(
+            "CVM requires the Cwhip numeric-v2 SDK ABI",
+            self.run_configure(success=False),
+        )
+
+        config.write_text(original)
+        header = self.fallback / "include/cwhip/Stdlib.h"
+        header.write_text('#define CWHIP_SDK_ABI "legacy"\n')
+        self.assertIn(
+            'CWHIP_SDK_ABI "numeric-v2"',
+            self.run_configure(success=False),
+        )
 
     def test_empty_override_and_xdg_allow_dedicated_literal_string(self):
         self.env["CWHIP_SDK"] = ""

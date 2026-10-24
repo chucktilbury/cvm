@@ -3,6 +3,7 @@ name = "cvmfile"
 version = "1.0.0"
 source = "cvmfile.cw"
 export = "namespace:CVMFile"
+sdk-abi = "numeric-v2"
 
 [dependencies]
 system = "=0.1.0"

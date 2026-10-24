@@ -5,7 +5,7 @@ namespace CVMFile {
         private:
         buffer _bytes
         String _error
-        int _category
+        int64 _category
 
         public:
         enum { OK = 0, IO_ERROR = 1, LIMIT_EXCEEDED = 2 }
@@ -17,7 +17,7 @@ namespace CVMFile {
             if (_error.equals("")) { _category = OK }
         }
 
-        Result(buffer bytes, String error, int category) {
+        Result(buffer bytes, String error, int64 category) {
             _bytes = bytes
             _error = error
             _category = category
@@ -25,7 +25,7 @@ namespace CVMFile {
         bool ok() { return _error.equals("") }
         buffer bytes() { return _bytes }
         String error() { return _error }
-        int category() { return _category }
+        int64 category() { return _category }
     }
 
     class Files {
@@ -34,7 +34,7 @@ namespace CVMFile {
             return readLimited(path, 9223372036854775807)
         }
 
-        Result readLimited(String path, int maximumBytes) {
+        Result readLimited(String path, int64 maximumBytes) {
             if (maximumBytes < 0) { return Result(buffer[], "maximum read size cannot be negative") }
             Sys.File file = null
             try {
@@ -48,8 +48,8 @@ namespace CVMFile {
             try {
                 bool finished = false
                 while (!finished && failure.equals("")) {
-                    int requestSize = 65536
-                    int remaining = maximumBytes - bytes.length
+                    int64 requestSize = 65536
+                    int64 remaining = maximumBytes - bytes.length
                     if (remaining < requestSize) { requestSize = remaining + 1 }
                     buffer part = file.readBytes(requestSize)
                     failure = Sys.System().lastError()
@@ -58,7 +58,7 @@ namespace CVMFile {
                             failure = format("input exceeds configured byte limit ({})", maximumBytes)
                             limitExceeded = true
                         } else {
-                            int index = 0
+                            int64 index = 0
                             while (index < part.length) {
                                 bytes.append(part[index])
                                 index = index + 1
@@ -74,7 +74,7 @@ namespace CVMFile {
                 if (failure.equals("") && !closeError.equals("")) { failure = closeError }
             }
             if (!failure.equals("")) {
-                int category = Result.IO_ERROR
+                int64 category = Result.IO_ERROR
                 if (limitExceeded) { category = Result.LIMIT_EXCEEDED }
                 return Result(buffer[], format("read '{}': {}", path, failure), category)
             }
@@ -91,11 +91,11 @@ namespace CVMFile {
             }
             String failure = ""
             try {
-                int offset = 0
+                int64 offset = 0
                 while (offset < bytes.length && failure.equals("")) {
-                    int end = offset + 65536
+                    int64 end = offset + 65536
                     if (end > bytes.length) { end = bytes.length }
-                    int count = file.writeBytes(bytes[offset:end])
+                    int64 count = file.writeBytes(bytes[offset:end])
                     failure = Sys.System().lastError()
                     if (failure.equals("")) {
                         if (count <= 0 || count > end - offset) { failure = "invalid write progress" }

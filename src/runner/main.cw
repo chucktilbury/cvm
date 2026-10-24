@@ -3,14 +3,14 @@ import cvmrun as VM
 import system as Sys
 
 class RunnerCLI {
-    int parseLimit(String text, int maximum, bool allowZero) {
+    int64 parseLimit(String text, int64 maximum, bool allowZero) {
         if (text.length == 0) { return -1 }
-        int value = 0
-        int index = 0
+        int64 value = 0
+        int64 index = 0
         while (index < text.length) {
-            int byte = int(text.byteAt(index))
+            int64 byte = int64(text.byteAt(index))
             if (byte < 48 || byte > 57) { return -1 }
-            int digit = byte - 48
+            int64 digit = byte - 48
             if (value > (maximum - digit) / 10) { return -1 }
             value = value * 10 + digit
             index = index + 1
@@ -27,7 +27,7 @@ class RunnerCLI {
         Sys.StandardIO().writeErrorLine(usage())
     }
 
-    int run() {
+    int64 run() {
         Sys.Process process = Sys.Process()
         if (process.argc() == 2 && process.arg(1).equals("--help")) {
             Sys.StandardIO().writeLine(usage())
@@ -35,18 +35,18 @@ class RunnerCLI {
         }
 
         VM.Limits defaults = VM.Limits()
-        int programBytes = defaults.programBytes()
-        int instructions = defaults.instructions()
-        int stackValues = defaults.stackValues()
-        int callDepth = defaults.callDepth()
-        int heapBytes = defaults.heapBytes()
+        int64 programBytes = defaults.programBytes()
+        int64 instructions = defaults.instructions()
+        int64 stackValues = defaults.stackValues()
+        int64 callDepth = defaults.callDepth()
+        int64 heapBytes = defaults.heapBytes()
         VM.Capabilities defaultCapabilities = VM.Capabilities()
         bool stdinEnabled = defaultCapabilities.stdinEnabled()
         bool stdoutEnabled = defaultCapabilities.stdoutEnabled()
         bool filesEnabled = defaultCapabilities.filesEnabled()
-        int maxOpenFiles = defaultCapabilities.maxOpenFiles()
+        int64 maxOpenFiles = defaultCapabilities.maxOpenFiles()
         String input = ""
-        int index = 1
+        int64 index = 1
         while (index < process.argc()) {
             String argument = process.arg(index)
             if (argument.equals("--no-stdin")) {
@@ -66,7 +66,7 @@ class RunnerCLI {
                                 usageError()
                                 return 2
                             }
-                            int maximum = VM.Limits.MAX_PROGRAM_BYTES
+                            int64 maximum = VM.Limits.MAX_PROGRAM_BYTES
                             bool allowZero = false
                             if (argument.equals("--max-program-bytes")) { maximum = VM.Limits.MAX_PROGRAM_BYTES }
                             if (argument.equals("--max-instructions")) { maximum = VM.Limits.MAX_INSTRUCTIONS }
@@ -80,7 +80,7 @@ class RunnerCLI {
                                 maximum = VM.Capabilities.MAX_OPEN_FILES
                                 allowZero = true
                             }
-                            int value = parseLimit(process.arg(index + 1), maximum, allowZero)
+                            int64 value = parseLimit(process.arg(index + 1), maximum, allowZero)
                             if (value < 0) {
                                 usageError()
                                 return 2
@@ -127,7 +127,7 @@ class RunnerCLI {
         if (result.ok()) {
             String summary = format("result: {}", result.guestResult())
             Sys.StandardIO io = Sys.StandardIO()
-            int written = -1
+            int64 written = -1
             String error = ""
             try {
                 written = io.writeLine(summary)

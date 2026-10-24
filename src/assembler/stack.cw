@@ -3,8 +3,8 @@ class StackDepth {
         raise(AssemblyError(message, instruction.line, instruction.column))
     }
 
-    int target(Function function, int offset) {
-        int index = 0
+    int64 target(Function function, int64 offset) {
+        int64 index = 0
         while (index < function.instructions.length) {
             if ((function.instructions[index] as Instruction).offset == offset) { return index }
             index = index + 1
@@ -12,9 +12,9 @@ class StackDepth {
         return -1
     }
 
-    void enqueue(Function function, list depths, list pending, int index, int depth, Instruction origin) {
+    void enqueue(Function function, list depths, list pending, int64 index, int64 depth, Instruction origin) {
         if (index < 0 || index >= function.instructions.length) { fail("reachable fallthrough or invalid branch", origin) }
-        int previous = depths[index] as int
+        int64 previous = depths[index] as int64
         if (previous >= 0 && previous != depth) { fail("inconsistent stack depth at control-flow join", origin) }
         if (previous < 0) {
             depths[index] = depth
@@ -22,33 +22,33 @@ class StackDepth {
         }
     }
 
-    int maximum(Function function, list functions) {
+    int64 maximum(Function function, list functions) {
         list depths = []
         list pending = []
-        int index = 0
+        int64 index = 0
         while (index < function.instructions.length) {
             Instruction instruction = function.instructions[index] as Instruction
-            int op = instruction.opcode
-            int returnType = -1
+            int64 op = instruction.opcode
+            int64 returnType = -1
             if (op == CVM.Opcode.RET) { returnType = 0 }
             if (op == CVM.Opcode.RET_I32) { returnType = 1 }
             if (op == CVM.Opcode.RET_U8) { returnType = 2 }
             if (op == CVM.Opcode.RET_FILE) { returnType = 3 }
             if (returnType >= 0 && returnType != function.result) { fail("return opcode does not match declared return type", instruction) }
-            depths.append(-1)
+            depths.append(int64(-1))
             index = index + 1
         }
-        depths[0] = 0
-        pending.append(0)
-        int cursor = 0
-        int maximumDepth = 0
+        depths[0] = int64(0)
+        pending.append(int64(0))
+        int64 cursor = 0
+        int64 maximumDepth = 0
         while (cursor < pending.length) {
-            int at = pending[cursor] as int
+            int64 at = pending[cursor] as int64
             cursor = cursor + 1
             Instruction instruction = function.instructions[at] as Instruction
-            int op = instruction.opcode
-            int required = 0
-            int produced = 0
+            int64 op = instruction.opcode
+            int64 required = 0
+            int64 produced = 0
             bool returns = false
             if (op == CVM.Opcode.CONST_I32 || op == CVM.Opcode.CONST_U8 || op == CVM.Opcode.LDLOC || op == CVM.Opcode.LDGLOBAL || op == CVM.Opcode.ARRAY) { produced = 1 }
             if (op == CVM.Opcode.STLOC || op == CVM.Opcode.STGLOBAL || op == CVM.Opcode.ALEN || op == CVM.Opcode.NEG_I32 || op == CVM.Opcode.TO_U8 || op == CVM.Opcode.TO_I32) { required = 1
@@ -74,7 +74,7 @@ class StackDepth {
                 returns = true
                 if (function.result != 0) { required = 1 }
             }
-            int depth = depths[at] as int
+            int64 depth = depths[at] as int64
             if (depth < required) { fail("evaluation stack underflow", instruction) }
             if (returns && depth != required) { fail("extra evaluation stack values at return", instruction) }
             depth = depth - required + produced
