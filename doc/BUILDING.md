@@ -9,6 +9,13 @@ The latter API addition is Cwhip PR #20; SDK version `0.0.1` alone does not
 distinguish old installations. Configuration checks the public API and fails
 clearly for older SDKs. No SDK is built, downloaded or overwritten by CVM.
 
+The installed SDK must also provide `cwhip_apply_application_defaults`
+([chucktilbury/cwhip#21](https://github.com/chucktilbury/cwhip/pull/21) or newer).
+Updating the Cwhip source checkout alone is insufficient: rebuild and reinstall
+the SDK at the selected prefix before configuring CVM. Configuration reports
+that prefix and an actionable error when this capability is missing; it does
+not silently fall back to older behavior.
+
 An installed cparsegen supporting `--library` is also required at build time.
 Put its executable on `PATH` or pass
 `-DCPARSEGEN_EXECUTABLE=/absolute/path/to/cparsegen` to CMake. It generates

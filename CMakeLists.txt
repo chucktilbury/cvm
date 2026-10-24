@@ -45,6 +45,12 @@ else()
     find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED)
 endif()
 
+if(NOT COMMAND cwhip_apply_application_defaults)
+    message(FATAL_ERROR
+        "The selected Cwhip SDK at '${Cwhip_PREFIX}' is missing application-defaults "
+        "support (cwhip_apply_application_defaults). Rebuild and reinstall an updated "
+        "Cwhip SDK with chucktilbury/cwhip#21 or newer, then configure CVM again.")
+endif()
 cwhip_apply_application_defaults()
 
 project(cvm LANGUAGES C)
