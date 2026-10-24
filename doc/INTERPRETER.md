@@ -22,6 +22,11 @@ the function-relative instruction byte offset. Validation diagnostics include
 the validator's section and byte offset. The public API preserves these
 categories and fields in `CVMRun.ExecutionResult`.
 
+An unrecognized argument is treated as the input path, not rejected as an
+unknown option. For example, `cvm-run --not-an-option` attempts to load a file
+with that name and exits 1 if it cannot be opened; an additional input argument
+is a usage error and exits 2.
+
 ## Execution scope
 
 The interpreter executes every v1 opcode and all thirteen specified host services:
