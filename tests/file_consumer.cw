@@ -6,7 +6,7 @@ start {
     IO.Files files = IO.Files()
     String path = Sys.Process().arg(1)
     buffer all = buffer[]
-    int index = 0
+    int64 index = 0
     while (index < 256) {
         all.append(index)
         index = index + 1
@@ -20,14 +20,14 @@ start {
     if (!loaded.ok() || loaded.bytes().length != 256) { Sys.Process().exit(2) }
     index = 0
     while (index < 256) {
-        if (int(loaded.bytes()[index]) != index) { Sys.Process().exit(3) }
+        if (int64(loaded.bytes()[index]) != index) { Sys.Process().exit(3) }
         index = index + 1
     }
     if (files.read(format("{}/missing", path)).ok()) { Sys.Process().exit(4) }
     if (files.write(format("{}/missing", path), all).ok()) { Sys.Process().exit(5) }
     if (Sys.Process().argc() > 2 && Sys.Process().arg(2).equals("--io")) {
-        int before = Sys.FileSystem().listDir("/proc/self/fd").length
-        int repeat = 0
+        int64 before = Sys.FileSystem().listDir("/proc/self/fd").length
+        int64 repeat = 0
         while (repeat < 32) {
             if (files.read("/proc/self/mem").ok()) { Sys.Process().exit(8) }
             if (files.write("/dev/full", all).ok()) { Sys.Process().exit(9) }

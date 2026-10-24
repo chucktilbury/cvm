@@ -2,12 +2,16 @@
 
 This starter consumes the installed CWhip SDK; it does not build or download
 the compiler or SDK for you. Use the complete SDK installation prefix, not
-just its `bin/` directory. CMake requires SDK version `0.0.1` and an
+just its `bin/` directory. CMake requires Cwhip SDK version `0.0.2`, the
+`numeric-v2` ABI, and an
 installation that supports configurable application output directories and
 the public binary `File.readBytes`, `readAllBytes`, and `writeBytes` APIs.
-The latter API addition is Cwhip PR #20; SDK version `0.0.1` alone does not
-distinguish old installations. Configuration checks the public API and fails
-clearly for older SDKs. No SDK is built, downloaded or overwritten by CVM.
+The numeric ABI and public C header are checked during configuration, and
+configuration also checks the binary file API signatures. Build the SDK with
+[chucktilbury/cwhip#25](https://github.com/chucktilbury/cwhip/pull/25) (which
+includes the binary file APIs from
+[chucktilbury/cwhip#20](https://github.com/chucktilbury/cwhip/pull/20)) before
+building CVM. No SDK is built, downloaded or overwritten by CVM.
 
 An installed cparsegen supporting `--library` is also required at build time.
 Put its executable on `PATH` or pass

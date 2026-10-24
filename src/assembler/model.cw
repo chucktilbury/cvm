@@ -1,9 +1,9 @@
 import cvm as CVM
 
 class AssemblyError : public Exception {
-    int column
-    int line
-    AssemblyError(String message, int row, int col) {
+    int64 column
+    int64 line
+    AssemblyError(String message, int64 row, int64 col) {
         super Exception(message)
         line = row
         column = col
@@ -12,21 +12,21 @@ class AssemblyError : public Exception {
 
 class Symbol {
     String name
-    int value
-    Symbol(String n, int v) {
+    int64 value
+    Symbol(String n, int64 v) {
         name = n
         value = v
     }
 }
 
 class Instruction {
-    int opcode
+    int64 opcode
     String operand
-    int line
-    int column
-    int offset
-    int value
-    Instruction(int op, String arg, int row, int col, int at) {
+    int64 line
+    int64 column
+    int64 offset
+    int64 value
+    Instruction(int64 op, String arg, int64 row, int64 col, int64 at) {
         opcode = op
         operand = arg
         line = row
@@ -42,12 +42,12 @@ class Function {
     buffer types
     list labels
     list instructions
-    int parameters
-    int result
-    int length
-    int line
+    int64 parameters
+    int64 result
+    int64 length
+    int64 line
     bool started
-    Function(String n, int r, int row) {
+    Function(String n, int64 r, int64 row) {
         name = n
         result = r
         line = row
@@ -63,11 +63,11 @@ class Function {
 
 class ArrayDeclaration {
     String name
-    int owner
-    int element
-    int count
+    int64 owner
+    int64 element
+    int64 count
     buffer data
-    ArrayDeclaration(String n, int o, int e, int c, buffer d) {
+    ArrayDeclaration(String n, int64 o, int64 e, int64 c, buffer d) {
         name = n
         owner = o
         element = e
@@ -78,9 +78,9 @@ class ArrayDeclaration {
 
 class GlobalDeclaration {
     String name
-    int valueType
-    int value
-    GlobalDeclaration(String n, int t, int v) {
+    int64 valueType
+    int64 value
+    GlobalDeclaration(String n, int64 t, int64 v) {
         name = n
         valueType = t
         value = v

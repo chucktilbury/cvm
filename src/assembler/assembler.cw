@@ -14,7 +14,7 @@ class Assembler {
     list arrayNames
     Function current
     String entry
-    int entryLine
+    int64 entryLine
     bool version
     Literals literals
     CVM.Opcode schema
@@ -34,10 +34,10 @@ class Assembler {
         schema = CVM.Opcode()
     }
 
-    void fail(String message, int row, int col) { raise(AssemblyError(message, row, col)) }
+    void fail(String message, int64 row, int64 col) { raise(AssemblyError(message, row, col)) }
 
-    int find(list symbols, String name) {
-        int index = 0
+    int64 find(list symbols, String name) {
+        int64 index = 0
         while (index < symbols.length) {
             Symbol symbol = symbols[index] as Symbol
             if (symbol.name.equals(name)) { return symbol.value }
@@ -46,13 +46,13 @@ class Assembler {
         return -1
     }
 
-    void declare(list symbols, String name, int value, int row, int col) {
+    void declare(list symbols, String name, int64 value, int64 row, int64 col) {
         if (!literals.identifier(name)) { fail("invalid identifier", row, col) }
         if (find(symbols, name) >= 0) { fail(format("duplicate symbol '{}'", name), row, col) }
         symbols.append(Symbol(name, value))
     }
 
-    void local(String name, int valueType, int row, int col) {
+    void local(String name, int64 valueType, int64 row, int64 col) {
         if (current.started) { fail("local declarations must precede statements", row, col) }
         if (current.types.length >= 65536) { fail("too many parameters and locals", row, col) }
         declare(current.locals, name, current.types.length, row, col)
@@ -60,15 +60,15 @@ class Assembler {
     }
 
     void arrayDeclaration(AstNode node, SourceLine source) {
-        int row = source.row
-        int col = source.column(node)
+        int64 row = source.row
+        int64 col = source.column(node)
         String name = node.childAt(1).lexeme()
-        int element = literals.valueType(node.childAt(3).lexeme(), false, row, source.column(node.childAt(3)))
+        int64 element = literals.valueType(node.childAt(3).lexeme(), false, row, source.column(node.childAt(3)))
         if (element == 3) { fail("arrays require i32 or u8 elements", row, col) }
-        int count = literals.number(node.childAt(5).lexeme(), row, source.column(node.childAt(5)))
+        int64 count = literals.number(node.childAt(5).lexeme(), row, source.column(node.childAt(5)))
         if (count <= 0 || count > 4294967295) { fail("array capacity out of range", row, col) }
         if (arrays.length >= 65536) { fail("too many arrays", row, col) }
-        int owner = 65535
+        int64 owner = 65535
         if (current != null) {
             if (current.started) { fail("local declarations must precede statements", row, col) }
             owner = functions.length - 1
@@ -76,7 +76,7 @@ class Assembler {
         declare(arrayNames, name, arrays.length, row, source.column(node.childAt(1)))
         buffer data = buffer[]
         if (node.childCount() > 7) {
-            int elementWidth = 1
+            int64 elementWidth = 1
             if (element == 1) { elementWidth = 4 }
             if (count > 4294967295 / elementWidth) { fail("array initializer byte length exceeds v1 range", row, col) }
             AstNode initializer = node.childAt(8)
@@ -87,11 +87,11 @@ class Assembler {
                 data.append(0)
                 if (data.length > count) { fail("string initializer exceeds capacity including NUL", row, col) }
             } else {
-                int index = 1
-                int used = 0
+                int64 index = 1
+                int64 used = 0
                 while (index < initializer.childCount() - 1) {
                     if (used >= count) { fail("array initializer exceeds capacity", row, source.column(initializer.childAt(index))) }
-                    int value = source.scalar(initializer.childAt(index), element, literals)
+                    int64 value = source.scalar(initializer.childAt(index), element, literals)
                     if (element == 1) { writer.writeI32(value) }
                     else { writer.writeU8(value) }
                     used = used + 1
@@ -99,7 +99,7 @@ class Assembler {
                 }
                 data = writer.bytes()
             }
-            int width = 1
+            int64 width = 1
             if (element == 1) { width = 4 }
             while (data.length < count * width) { data.append(0) }
         }
@@ -108,8 +108,8 @@ class Assembler {
 
     void consume(AstNode node, SourceLine source) {
         String kind = node.kind()
-        int row = source.row
-        int col = source.column(node)
+        int64 row = source.row
+        int64 col = source.column(node)
         if (!version) {
             if (!kind.equals("version")) { fail("file must start with .version 1.0", row, col) }
             version = true
@@ -130,9 +130,9 @@ class Assembler {
             if (current != null) { fail("global declaration inside function", row, col) }
             if (globals.length >= 65536) { fail("too many globals", row, col) }
             String name = node.childAt(1).lexeme()
-            int valueType = literals.valueType(node.childAt(3).lexeme(), false, row, source.column(node.childAt(3)))
+            int64 valueType = literals.valueType(node.childAt(3).lexeme(), false, row, source.column(node.childAt(3)))
             if (valueType == 3) { fail("global type must be i32 or u8", row, col) }
-            int value = source.scalar(node.childAt(5), valueType, literals)
+            int64 value = source.scalar(node.childAt(5), valueType, literals)
             declare(globalNames, name, globals.length, row, source.column(node.childAt(1)))
             globals.append(GlobalDeclaration(name, valueType, value))
             return
@@ -142,13 +142,13 @@ class Assembler {
             if (functions.length >= 65535) { fail("too many functions", row, col) }
             String name = node.childAt(1).lexeme()
             declare(functionNames, name, functions.length, row, source.column(node.childAt(1)))
-            int valueType = literals.valueType(node.childAt(node.childCount() - 1).lexeme(), true, row, col)
+            int64 valueType = literals.valueType(node.childAt(node.childCount() - 1).lexeme(), true, row, col)
             current = Function(name, valueType, row)
             functions.append(current)
-            int index = 3
+            int64 index = 3
             while (index < node.childCount() - 3) {
                 AstNode parameter = node.childAt(index)
-                int parameterType = literals.valueType(parameter.childAt(2).lexeme(), false, row, source.column(parameter.childAt(2)))
+                int64 parameterType = literals.valueType(parameter.childAt(2).lexeme(), false, row, source.column(parameter.childAt(2)))
                 local(parameter.childAt(0).lexeme(), parameterType, row, source.column(parameter))
                 current.parameters = current.parameters + 1
                 if (current.parameters > 65535) { fail("too many parameters", row, col) }
@@ -163,7 +163,7 @@ class Assembler {
             return
         }
         if (kind.equals("local_decl")) {
-            int valueType = literals.valueType(node.childAt(3).lexeme(), false, row, source.column(node.childAt(3)))
+            int64 valueType = literals.valueType(node.childAt(3).lexeme(), false, row, source.column(node.childAt(3)))
             if (current.types.length - current.parameters >= 65535) { fail("too many locals", row, col) }
             local(node.childAt(1).lexeme(), valueType, row, source.column(node.childAt(1)))
             return
@@ -175,20 +175,20 @@ class Assembler {
         }
         if (!kind.equals("instruction")) { fail("unexpected directive", row, col) }
         String mnemonic = node.childAt(0).lexeme()
-        int opcode = CVM.Opcode.NOP
+        int64 opcode = CVM.Opcode.NOP
         while (opcode <= CVM.Opcode.RET_FILE && !schema.mnemonic(opcode).equals(mnemonic)) { opcode = opcode + 1 }
         if (!schema.isValid(opcode)) { fail(format("unknown instruction '{}'", mnemonic), row, col) }
         bool hasOperand = schema.operandWidth(opcode) != 0
         if ((!hasOperand && node.childCount() != 1) || (hasOperand && node.childCount() != 2)) { fail("wrong operand count", row, col) }
         String operand = ""
         String operandKind = ""
-        int literalValue = 0
+        int64 literalValue = 0
         if (hasOperand) {
             AstNode value = node.childAt(1)
             AstNode token = value.childAt(0)
             operand = token.lexeme()
             operandKind = token.kind()
-            int expected = schema.operandKind(opcode)
+            int64 expected = schema.operandKind(opcode)
             if (expected == 1 || (expected == 2 && opcode != CVM.Opcode.SYS)) {
                 literalValue = source.scalar(value, expected, literals)
             } else {
@@ -203,19 +203,19 @@ class Assembler {
         if (current.length > 4294967295) { fail("function code too large", row, col) }
     }
 
-    int resolve(list names, String name, Instruction instruction) {
-        int index = find(names, name)
+    int64 resolve(list names, String name, Instruction instruction) {
+        int64 index = find(names, name)
         if (index < 0) { fail(format("unresolved symbol '{}'", name), instruction.line, instruction.column) }
         return index
     }
 
     buffer encode(buffer text) {
         SourceText().validate(text)
-        int index = 0
-        int lineStart = 0
-        int row = 1
+        int64 index = 0
+        int64 lineStart = 0
+        int64 row = 1
         while (index <= text.length) {
-            if (index == text.length || int(text[index]) == 10) {
+            if (index == text.length || int64(text[index]) == 10) {
                 SourceLine line = SourceLine(text[lineStart:index], row)
                 AstNode node = line.parse()
                 if (node != null) { consume(node, line) }
@@ -226,7 +226,7 @@ class Assembler {
         }
         if (!version || entry.equals("")) { fail("missing .version or .entry", 1, 1) }
         if (current != null) { fail("missing .end", current.line, 1) }
-        int entryIndex = find(functionNames, entry)
+        int64 entryIndex = find(functionNames, entry)
         if (entryIndex < 0) { fail("unresolved entry function", entryLine, 1) }
         Function main = functions[entryIndex] as Function
         if (main.parameters != 0 || main.result != 1) { fail("entry must be main() -> i32", main.line, 1) }
@@ -236,11 +236,11 @@ class Assembler {
         while (index < functions.length) {
             Function function = functions[index] as Function
             CVM.InstructionBuilder code = CVM.InstructionBuilder()
-            int at = 0
+            int64 at = 0
             while (at < function.instructions.length) {
                 Instruction instruction = function.instructions[at] as Instruction
-                int kind = schema.operandKind(instruction.opcode)
-                int value = instruction.value
+                int64 kind = schema.operandKind(instruction.opcode)
+                int64 value = instruction.value
                 if (instruction.opcode == CVM.Opcode.SYS) {
                     CVM.Service services = CVM.Service()
                     while (value <= CVM.Service.FILE_CLOSE_HANDLE && !services.name(value).equals(instruction.operand)) { value = value + 1 }
@@ -265,7 +265,7 @@ class Assembler {
                 if (!ok) { fail(code.errorMessage(), instruction.line, instruction.column) }
                 at = at + 1
             }
-            int maximum = StackDepth().maximum(function, functions)
+            int64 maximum = StackDepth().maximum(function, functions)
             if (!builder.addFunction(function.name, code.bytes(), function.types, function.parameters, function.types.length - function.parameters, maximum, function.result)) { fail(builder.errorMessage(), function.line, 1) }
             index = index + 1
         }
@@ -290,7 +290,7 @@ class Assembler {
 }
 
 class AssemblerCLI {
-    int run() {
+    int64 run() {
         Sys.Process process = Sys.Process()
         if (process.argc() == 2 && process.arg(1).equals("--help")) {
             Sys.StandardIO().writeLine("usage: cvm-as INPUT.asm -o OUTPUT.cvm")

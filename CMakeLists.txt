@@ -39,10 +39,25 @@ if(NOT cwhip_sdk_prefix STREQUAL "")
     message(STATUS "Using Cwhip SDK prefix: ${cwhip_sdk_prefix}")
     unset(Cwhip_DIR CACHE)
     unset(Cwhip_DIR)
-    find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED
+    find_package(Cwhip 0.0.2 EXACT CONFIG REQUIRED
         PATHS "${cwhip_sdk_prefix}" NO_DEFAULT_PATH)
 else()
-    find_package(Cwhip 0.0.1 EXACT CONFIG REQUIRED)
+    find_package(Cwhip 0.0.2 EXACT CONFIG REQUIRED)
+endif()
+
+if(NOT Cwhip_SDK_ABI STREQUAL "numeric-v2")
+    message(FATAL_ERROR
+        "CVM requires the Cwhip numeric-v2 SDK ABI; selected SDK reports "
+        "'${Cwhip_SDK_ABI}'. Rebuild CVM's Cwhip dependencies with chucktilbury/cwhip#25.")
+endif()
+if(NOT EXISTS "${Cwhip_INCLUDE_DIR}/cwhip/Stdlib.h")
+    message(FATAL_ERROR
+        "Selected Cwhip SDK is missing ${Cwhip_INCLUDE_DIR}/cwhip/Stdlib.h")
+endif()
+file(READ "${Cwhip_INCLUDE_DIR}/cwhip/Stdlib.h" cwhip_sdk_header)
+if(NOT cwhip_sdk_header MATCHES "#define CWHIP_SDK_ABI \"numeric-v2\"")
+    message(FATAL_ERROR
+        "CVM requires CWHIP_SDK_ABI \"numeric-v2\" in the selected SDK's Stdlib.h")
 endif()
 
 cwhip_apply_application_defaults()
@@ -98,7 +113,7 @@ if(NOT EXISTS "${cvm_system_source}")
     message(FATAL_ERROR "CVM assembler requires public SDK system/0.1.0 with binary File APIs")
 endif()
 file(READ "${cvm_system_source}" cvm_system_api)
-foreach(method "buffer readBytes\\(int size\\)" "buffer readAllBytes\\(\\)" "int writeBytes\\(buffer data\\)")
+foreach(method "buffer readBytes\\(int64 size\\)" "buffer readAllBytes\\(\\)" "int64 writeBytes\\(buffer data\\)")
     if(NOT cvm_system_api MATCHES "${method}")
         message(FATAL_ERROR
             "Selected SDK lacks public File binary APIs (Cwhip PR #20 or newer required)")
@@ -124,7 +139,10 @@ add_custom_command(OUTPUT "${assembler_work}/parser.cw"
     COMMAND "${CMAKE_COMMAND}" -E rm -f "${assembler_work}/parser.cw"
     COMMAND "${CPARSEGEN_EXECUTABLE}" --library
         "${PROJECT_SOURCE_DIR}/grammar/assembly.cpg" "${assembler_work}/parser.cw"
+    COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/migrate-generated-parser.py"
+        "${assembler_work}/parser.cw"
     DEPENDS "${PROJECT_SOURCE_DIR}/grammar/assembly.cpg" "${CPARSEGEN_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/scripts/migrate-generated-parser.py"
     VERBATIM)
 add_custom_command(OUTPUT "${assembler_binary}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CWHIP_BIN_DIR}"

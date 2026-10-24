@@ -3,6 +3,7 @@ name = "cvmrun"
 version = "1.0.0"
 source = "cvmrun.cw"
 export = "namespace:CVMRun"
+sdk-abi = "numeric-v2"
 
 [dependencies]
 cvm = "=1.0.0"

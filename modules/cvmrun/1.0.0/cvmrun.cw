@@ -5,11 +5,11 @@ import system as Sys
 namespace CVMRun {
     class Limits {
         private:
-        int _programBytes
-        int _instructions
-        int _stackValues
-        int _callDepth
-        int _heapBytes
+        int64 _programBytes
+        int64 _instructions
+        int64 _stackValues
+        int64 _callDepth
+        int64 _heapBytes
 
         public:
         enum {
@@ -34,7 +34,7 @@ namespace CVMRun {
             _heapBytes = DEFAULT_HEAP_BYTES
         }
 
-        Limits(int programBytes, int instructions, int stackValues, int callDepth, int heapBytes) {
+        Limits(int64 programBytes, int64 instructions, int64 stackValues, int64 callDepth, int64 heapBytes) {
             _programBytes = programBytes
             _instructions = instructions
             _stackValues = stackValues
@@ -46,11 +46,11 @@ namespace CVMRun {
             return _programBytes > 0 && _programBytes <= MAX_PROGRAM_BYTES && _instructions > 0 && _instructions <= MAX_INSTRUCTIONS && _stackValues > 0 && _stackValues <= MAX_STACK_VALUES && _callDepth > 0 && _callDepth <= MAX_CALL_DEPTH && _heapBytes >= 0 && _heapBytes <= MAX_HEAP_BYTES
         }
 
-        int programBytes() { return _programBytes }
-        int instructions() { return _instructions }
-        int stackValues() { return _stackValues }
-        int callDepth() { return _callDepth }
-        int heapBytes() { return _heapBytes }
+        int64 programBytes() { return _programBytes }
+        int64 instructions() { return _instructions }
+        int64 stackValues() { return _stackValues }
+        int64 callDepth() { return _callDepth }
+        int64 heapBytes() { return _heapBytes }
     }
 
     class Capabilities {
@@ -58,7 +58,7 @@ namespace CVMRun {
         bool _stdin
         bool _stdout
         bool _files
-        int _maxOpenFiles
+        int64 _maxOpenFiles
 
         public:
         enum { DEFAULT_MAX_OPEN_FILES = 64, MAX_OPEN_FILES = 4096 }
@@ -71,7 +71,7 @@ namespace CVMRun {
         }
 
         Capabilities(bool stdinEnabled, bool stdoutEnabled, bool filesEnabled,
-                     int maxOpenFiles) {
+                     int64 maxOpenFiles) {
             _stdin = stdinEnabled
             _stdout = stdoutEnabled
             _files = filesEnabled
@@ -82,20 +82,20 @@ namespace CVMRun {
         bool stdinEnabled() { return _stdin }
         bool stdoutEnabled() { return _stdout }
         bool filesEnabled() { return _files }
-        int maxOpenFiles() { return _maxOpenFiles }
+        int64 maxOpenFiles() { return _maxOpenFiles }
     }
 
     class ExecutionResult {
         private:
-        int _category
-        int _guestResult
+        int64 _category
+        int64 _guestResult
         String _message
-        int _section
-        int _byteOffset
-        int _functionIndex
+        int64 _section
+        int64 _byteOffset
+        int64 _functionIndex
         String _functionName
-        int _instructionOffset
-        int _instructionsExecuted
+        int64 _instructionOffset
+        int64 _instructionsExecuted
 
         public:
         enum {
@@ -109,9 +109,9 @@ namespace CVMRun {
             CONFIGURATION_ERROR = 7
         }
 
-        ExecutionResult(int category, int guestResult, String message,
-                        int section, int byteOffset, int functionIndex,
-                        String functionName, int instructionOffset, int steps) {
+        ExecutionResult(int64 category, int64 guestResult, String message,
+                        int64 section, int64 byteOffset, int64 functionIndex,
+                        String functionName, int64 instructionOffset, int64 steps) {
             _category = category
             _guestResult = guestResult
             _message = message
@@ -124,36 +124,36 @@ namespace CVMRun {
         }
 
         bool ok() { return _category == SUCCESS }
-        int category() { return _category }
-        int guestResult() { return _guestResult }
+        int64 category() { return _category }
+        int64 guestResult() { return _guestResult }
         String message() { return _message }
-        int section() { return _section }
-        int byteOffset() { return _byteOffset }
-        int functionIndex() { return _functionIndex }
+        int64 section() { return _section }
+        int64 byteOffset() { return _byteOffset }
+        int64 functionIndex() { return _functionIndex }
         String functionName() { return _functionName }
-        int instructionOffset() { return _instructionOffset }
-        int instructionsExecuted() { return _instructionsExecuted }
+        int64 instructionOffset() { return _instructionOffset }
+        int64 instructionsExecuted() { return _instructionsExecuted }
     }
 
     class Value {
         private:
-        int _type
-        int _number
+        int64 _type
+        int64 _number
         ArrayInstance _array
         bool _initialized
 
         public:
         enum { I32 = 1, U8 = 2, FILE = 3, ARRAY_REF = 4 }
 
-        Value(int valueType, int number, ArrayInstance array, bool initialized) {
+        Value(int64 valueType, int64 number, ArrayInstance array, bool initialized) {
             _type = valueType
             _number = number
             _array = array
             _initialized = initialized
         }
 
-        int valueType() { return _type }
-        int number() { return _number }
+        int64 valueType() { return _type }
+        int64 number() { return _number }
         ArrayInstance array() { return _array }
         bool initialized() { return _initialized }
     }
@@ -161,18 +161,18 @@ namespace CVMRun {
     class FunctionInfo {
         private:
         String _name
-        int _codeOffset
-        int _codeLength
-        int _typeOffset
-        int _parameters
-        int _locals
-        int _maximumStack
-        int _returnType
+        int64 _codeOffset
+        int64 _codeLength
+        int64 _typeOffset
+        int64 _parameters
+        int64 _locals
+        int64 _maximumStack
+        int64 _returnType
         list _localArrayIndexes
 
         public:
-        FunctionInfo(String name, int codeOffset, int codeLength, int typeOffset,
-                     int parameters, int locals, int maximumStack, int returnType) {
+        FunctionInfo(String name, int64 codeOffset, int64 codeLength, int64 typeOffset,
+                     int64 parameters, int64 locals, int64 maximumStack, int64 returnType) {
             _name = name
             _codeOffset = codeOffset
             _codeLength = codeLength
@@ -185,27 +185,27 @@ namespace CVMRun {
         }
 
         String name() { return _name }
-        int codeOffset() { return _codeOffset }
-        int codeLength() { return _codeLength }
-        int typeOffset() { return _typeOffset }
-        int parameters() { return _parameters }
-        int locals() { return _locals }
-        int maximumStack() { return _maximumStack }
-        int returnType() { return _returnType }
+        int64 codeOffset() { return _codeOffset }
+        int64 codeLength() { return _codeLength }
+        int64 typeOffset() { return _typeOffset }
+        int64 parameters() { return _parameters }
+        int64 locals() { return _locals }
+        int64 maximumStack() { return _maximumStack }
+        int64 returnType() { return _returnType }
         list localArrayIndexes() { return _localArrayIndexes }
-        void addLocalArray(int index) { _localArrayIndexes.append(index) }
+        void addLocalArray(int64 index) { _localArrayIndexes.append(index) }
     }
 
     class ArrayInfo {
         private:
-        int _owner
-        int _elementType
-        int _length
+        int64 _owner
+        int64 _elementType
+        int64 _length
         bool _initialized
-        int _dataOffset
+        int64 _dataOffset
 
         public:
-        ArrayInfo(int owner, int elementType, int length, bool initialized, int dataOffset) {
+        ArrayInfo(int64 owner, int64 elementType, int64 length, bool initialized, int64 dataOffset) {
             _owner = owner
             _elementType = elementType
             _length = length
@@ -213,24 +213,24 @@ namespace CVMRun {
             _dataOffset = dataOffset
         }
 
-        int owner() { return _owner }
-        int elementType() { return _elementType }
-        int length() { return _length }
+        int64 owner() { return _owner }
+        int64 elementType() { return _elementType }
+        int64 length() { return _length }
         bool initialized() { return _initialized }
-        int dataOffset() { return _dataOffset }
+        int64 dataOffset() { return _dataOffset }
     }
 
     class ArrayInstance {
         private:
-        int _index
-        int _elementType
-        int _length
+        int64 _index
+        int64 _elementType
+        int64 _length
         buffer _bytes
         bool _alive
-        int _heapBytes
+        int64 _heapBytes
 
         public:
-        ArrayInstance(int index, int elementType, int length, buffer bytes, int heapBytes) {
+        ArrayInstance(int64 index, int64 elementType, int64 length, buffer bytes, int64 heapBytes) {
             _index = index
             _elementType = elementType
             _length = length
@@ -239,31 +239,31 @@ namespace CVMRun {
             _heapBytes = heapBytes
         }
 
-        int index() { return _index }
-        int elementType() { return _elementType }
-        int length() { return _length }
+        int64 index() { return _index }
+        int64 elementType() { return _elementType }
+        int64 length() { return _length }
         buffer bytes() { return _bytes }
         bool alive() { return _alive }
-        int heapBytes() { return _heapBytes }
+        int64 heapBytes() { return _heapBytes }
         void kill() { _alive = false }
     }
 
     class HostFile {
         private:
-        int _id
+        int64 _id
         Sys.File _file
         bool _open
         bool _integerHandle
 
         public:
-        HostFile(int id, Sys.File file, bool integerHandle) {
+        HostFile(int64 id, Sys.File file, bool integerHandle) {
             _id = id
             _file = file
             _open = true
             _integerHandle = integerHandle
         }
 
-        int id() { return _id }
+        int64 id() { return _id }
         Sys.File file() { return _file }
         bool open() { return _open }
         bool integerHandle() { return _integerHandle }
@@ -272,16 +272,16 @@ namespace CVMRun {
 
     class Frame {
         private:
-        int _functionIndex
-        int _pc
-        int _stackBase
-        int _callOffset
+        int64 _functionIndex
+        int64 _pc
+        int64 _stackBase
+        int64 _callOffset
         list _locals
         list _localArrays
         bool _active
 
         public:
-        Frame(int functionIndex, int pc, int stackBase, int callOffset, list locals) {
+        Frame(int64 functionIndex, int64 pc, int64 stackBase, int64 callOffset, list locals) {
             _functionIndex = functionIndex
             _pc = pc
             _stackBase = stackBase
@@ -291,11 +291,11 @@ namespace CVMRun {
             _active = true
         }
 
-        int functionIndex() { return _functionIndex }
-        int pc() { return _pc }
-        void setPc(int pc) { _pc = pc }
-        int stackBase() { return _stackBase }
-        int callOffset() { return _callOffset }
+        int64 functionIndex() { return _functionIndex }
+        int64 pc() { return _pc }
+        void setPc(int64 pc) { _pc = pc }
+        int64 stackBase() { return _stackBase }
+        int64 callOffset() { return _callOffset }
         list locals() { return _locals }
         list localArrays() { return _localArrays }
         bool active() { return _active }
@@ -320,13 +320,13 @@ namespace CVMRun {
         list _fileHandles
         Sys.File _stdinFile
         bool _stdinOpen
-        int _nextFileHandle
-        int _entry
-        int _steps
-        int _heapBytes
-        int _activeSlots
-        int _activeOffset
-        int _guestResult
+        int64 _nextFileHandle
+        int64 _entry
+        int64 _steps
+        int64 _heapBytes
+        int64 _activeSlots
+        int64 _activeOffset
+        int64 _guestResult
         bool _completed
 
         void reset(Limits limits) {
@@ -355,38 +355,38 @@ namespace CVMRun {
             _completed = false
         }
 
-        int byteAt(buffer bytes, int offset, int section) {
+        int64 byteAt(buffer bytes, int64 offset, int64 section) {
             if (bytes == null || offset < 0 || offset >= bytes.length) {
                 loadFailure(section, offset, "truncated section data")
                 return 0
             }
-            return int(bytes[offset])
+            return int64(bytes[offset])
         }
 
-        int u16At(buffer bytes, int offset, int section) {
+        int64 u16At(buffer bytes, int64 offset, int64 section) {
             if (bytes == null || offset < 0 || offset > bytes.length || bytes.length - offset < 2) {
                 loadFailure(section, offset, "truncated 16-bit field")
                 return 0
             }
-            return int(bytes[offset]) + int(bytes[offset + 1]) * 256
+            return int64(bytes[offset]) + int64(bytes[offset + 1]) * 256
         }
 
-        int u32At(buffer bytes, int offset, int section) {
+        int64 u32At(buffer bytes, int64 offset, int64 section) {
             if (bytes == null || offset < 0 || offset > bytes.length || bytes.length - offset < 4) {
                 loadFailure(section, offset, "truncated 32-bit field")
                 return 0
             }
-            return int(bytes[offset]) + int(bytes[offset + 1]) * 256 + int(bytes[offset + 2]) * 65536 + int(bytes[offset + 3]) * 16777216
+            return int64(bytes[offset]) + int64(bytes[offset + 1]) * 256 + int64(bytes[offset + 2]) * 65536 + int64(bytes[offset + 3]) * 16777216
         }
 
-        int i32At(buffer bytes, int offset, int section) {
-            int value = u32At(bytes, offset, section)
+        int64 i32At(buffer bytes, int64 offset, int64 section) {
+            int64 value = u32At(bytes, offset, section)
             if (_failure != null) { return 0 }
             if (value >= 2147483648) { return value - 4294967296 }
             return value
         }
 
-        void loadFailure(int section, int offset, String message) {
+        void loadFailure(int64 section, int64 offset, String message) {
             if (_failure == null) {
                 _failure = ExecutionResult(ExecutionResult.LOAD_ERROR, 0, message,
                     section, offset, -1, "", -1, _steps)
@@ -399,7 +399,7 @@ namespace CVMRun {
                 -1, "", -1, _steps)
         }
 
-        void failAt(int category, String message, int functionIndex, int offset) {
+        void failAt(int64 category, String message, int64 functionIndex, int64 offset) {
             if (_failure != null) { return }
             String name = ""
             if (functionIndex >= 0 && functionIndex < _functions.length) {
@@ -410,10 +410,10 @@ namespace CVMRun {
                 functionIndex, name, offset, _steps)
         }
 
-        void trap(int category, String message) {
+        void trap(int64 category, String message) {
             Frame frame = null
-            int functionIndex = -1
-            int offset = _activeOffset
+            int64 functionIndex = -1
+            int64 offset = _activeOffset
             if (_frames.length > 0) {
                 frame = _frames[_frames.length - 1] as Frame
                 functionIndex = frame.functionIndex()
@@ -421,16 +421,16 @@ namespace CVMRun {
             failAt(category, message, functionIndex, offset)
         }
 
-        String nameAt(buffer strings, int offset) {
+        String nameAt(buffer strings, int64 offset) {
             if (offset < 0 || offset >= strings.length) {
                 loadFailure(CVM.Format.STRINGS, offset, "function name offset is outside STRINGS")
                 return ""
             }
             String name = ""
-            int cursor = offset
+            int64 cursor = offset
             bool terminated = false
             while (cursor < strings.length && !terminated) {
-                int byte = int(strings[cursor])
+                int64 byte = int64(strings[cursor])
                 if (byte == 0) { terminated = true }
                 else {
                     if (byte >= 128) {
@@ -468,16 +468,16 @@ namespace CVMRun {
                 return false
             }
 
-            int offset = 0
+            int64 offset = 0
             while (offset < functions.length && _failure == null) {
-                int nameOffset = u32At(functions, offset, CVM.Format.FUNCS)
-                int codeOffset = u32At(functions, offset + 4, CVM.Format.FUNCS)
-                int codeLength = u32At(functions, offset + 8, CVM.Format.FUNCS)
-                int typeOffset = u32At(functions, offset + 12, CVM.Format.FUNCS)
-                int parameters = u16At(functions, offset + 16, CVM.Format.FUNCS)
-                int locals = u16At(functions, offset + 18, CVM.Format.FUNCS)
-                int maximumStack = u16At(functions, offset + 20, CVM.Format.FUNCS)
-                int returnType = byteAt(functions, offset + 24, CVM.Format.FUNCS)
+                int64 nameOffset = u32At(functions, offset, CVM.Format.FUNCS)
+                int64 codeOffset = u32At(functions, offset + 4, CVM.Format.FUNCS)
+                int64 codeLength = u32At(functions, offset + 8, CVM.Format.FUNCS)
+                int64 typeOffset = u32At(functions, offset + 12, CVM.Format.FUNCS)
+                int64 parameters = u16At(functions, offset + 16, CVM.Format.FUNCS)
+                int64 locals = u16At(functions, offset + 18, CVM.Format.FUNCS)
+                int64 maximumStack = u16At(functions, offset + 20, CVM.Format.FUNCS)
+                int64 returnType = byteAt(functions, offset + 24, CVM.Format.FUNCS)
                 if (_failure != null) { return false }
                 String name = nameAt(strings, nameOffset)
                 if (_failure != null) { return false }
@@ -485,9 +485,9 @@ namespace CVMRun {
                     loadFailure(CVM.Format.FUNCS, offset, "function metadata is outside its validated section")
                     return false
                 }
-                int typeIndex = 0
+                int64 typeIndex = 0
                 while (typeIndex < parameters + locals) {
-                    int valueType = int(_types[typeOffset + typeIndex])
+                    int64 valueType = int64(_types[typeOffset + typeIndex])
                     if (valueType < Value.I32 || valueType > Value.FILE) {
                         loadFailure(CVM.Format.TYPES, typeOffset + typeIndex, "invalid local or parameter type")
                         return false
@@ -502,14 +502,14 @@ namespace CVMRun {
 
             offset = 0
             while (offset < globals.length && _failure == null) {
-                int valueType = byteAt(globals, offset + 4, CVM.Format.GLOBALS)
-                int initial = i32At(globals, offset + 8, CVM.Format.GLOBALS)
+                int64 valueType = byteAt(globals, offset + 4, CVM.Format.GLOBALS)
+                int64 initial = i32At(globals, offset + 8, CVM.Format.GLOBALS)
                 if (_failure != null) { return false }
                 if ((valueType != Value.I32 && valueType != Value.U8) || (valueType == Value.U8 && (initial < 0 || initial > 255))) {
                     loadFailure(CVM.Format.GLOBALS, offset + 4, "invalid global type or initial value")
                     return false
                 }
-                int reserved = byteAt(globals, offset + 5, CVM.Format.GLOBALS) + byteAt(globals, offset + 6, CVM.Format.GLOBALS) + byteAt(globals, offset + 7, CVM.Format.GLOBALS)
+                int64 reserved = byteAt(globals, offset + 5, CVM.Format.GLOBALS) + byteAt(globals, offset + 6, CVM.Format.GLOBALS) + byteAt(globals, offset + 7, CVM.Format.GLOBALS)
                 if (_failure != null) { return false }
                 if (reserved != 0) {
                     loadFailure(CVM.Format.GLOBALS, offset + 5, "global reserved bytes are nonzero")
@@ -522,18 +522,18 @@ namespace CVMRun {
 
             offset = 0
             while (offset < arrays.length && _failure == null) {
-                int owner = u16At(arrays, offset + 4, CVM.Format.ARRAYS)
-                int elementType = byteAt(arrays, offset + 6, CVM.Format.ARRAYS)
-                int flags = byteAt(arrays, offset + 7, CVM.Format.ARRAYS)
-                int length = u32At(arrays, offset + 8, CVM.Format.ARRAYS)
-                int dataOffset = u32At(arrays, offset + 12, CVM.Format.ARRAYS)
-                int reserved = u32At(arrays, offset + 16, CVM.Format.ARRAYS)
+                int64 owner = u16At(arrays, offset + 4, CVM.Format.ARRAYS)
+                int64 elementType = byteAt(arrays, offset + 6, CVM.Format.ARRAYS)
+                int64 flags = byteAt(arrays, offset + 7, CVM.Format.ARRAYS)
+                int64 length = u32At(arrays, offset + 8, CVM.Format.ARRAYS)
+                int64 dataOffset = u32At(arrays, offset + 12, CVM.Format.ARRAYS)
+                int64 reserved = u32At(arrays, offset + 16, CVM.Format.ARRAYS)
                 if (_failure != null) { return false }
                 if ((owner != 65535 && owner >= _functions.length) || (elementType != Value.I32 && elementType != Value.U8) || (flags != 0 && flags != 1) || length <= 0 || reserved != 0) {
                     loadFailure(CVM.Format.ARRAYS, offset + 4, "invalid array metadata")
                     return false
                 }
-                int width = 1
+                int64 width = 1
                 if (elementType == Value.I32) { width = 4 }
                 if (_limits.heapBytes() < Limits.ARRAY_INSTANCE_OVERHEAD || length > (_limits.heapBytes() - Limits.ARRAY_INSTANCE_OVERHEAD) / width) {
                     failAt(ExecutionResult.RESOURCE_LIMIT,
@@ -541,19 +541,19 @@ namespace CVMRun {
                         -1, -1)
                     return false
                 }
-                int storageBytes = length * width
+                int64 storageBytes = length * width
                 if (flags == 1) {
                     if (dataOffset < 0 || dataOffset > _data.length || storageBytes > _data.length - dataOffset) {
                         loadFailure(CVM.Format.ARRAYS, offset + 12, "array initializer is outside DATA")
                         return false
                     }
-                    int priorIndex = 0
+                    int64 priorIndex = 0
                     while (priorIndex < _arrayInfos.length) {
                         ArrayInfo prior = _arrayInfos[priorIndex] as ArrayInfo
                         if (prior.initialized()) {
-                            int priorWidth = 1
+                            int64 priorWidth = 1
                             if (prior.elementType() == Value.I32) { priorWidth = 4 }
-                            int priorBytes = prior.length() * priorWidth
+                            int64 priorBytes = prior.length() * priorWidth
                             if (dataOffset < prior.dataOffset() + priorBytes && prior.dataOffset() < dataOffset + storageBytes) {
                                 loadFailure(CVM.Format.ARRAYS, offset + 12, "array initializer ranges overlap")
                                 return false
@@ -595,22 +595,22 @@ namespace CVMRun {
             return true
         }
 
-        ArrayInstance createArray(int index, ArrayInfo info) {
-            int width = 1
+        ArrayInstance createArray(int64 index, ArrayInfo info) {
+            int64 width = 1
             if (info.elementType() == Value.I32) { width = 4 }
             if (info.length() > _limits.heapBytes() / width) {
                 trap(ExecutionResult.RESOURCE_LIMIT, "array storage exceeds configured heap limit")
                 return null
             }
-            int size = info.length() * width
-            int chargedBytes = size + Limits.ARRAY_INSTANCE_OVERHEAD
+            int64 size = info.length() * width
+            int64 chargedBytes = size + Limits.ARRAY_INSTANCE_OVERHEAD
             if (chargedBytes > _limits.heapBytes() - _heapBytes) {
                 trap(ExecutionResult.RESOURCE_LIMIT, "array storage exceeds configured heap limit")
                 return null
             }
             buffer bytes = buffer(size)
             if (info.initialized()) {
-                int indexInArray = 0
+                int64 indexInArray = 0
                 while (indexInArray < size) {
                     bytes[indexInArray] = _data[info.dataOffset() + indexInArray]
                     indexInArray = indexInArray + 1
@@ -620,16 +620,16 @@ namespace CVMRun {
             return ArrayInstance(index, info.elementType(), info.length(), bytes, chargedBytes)
         }
 
-        int localType(FunctionInfo function, int index) {
+        int64 localType(FunctionInfo function, int64 index) {
             if (index < 0 || index >= function.parameters() + function.locals()) { return 0 }
-            return int(_types[function.typeOffset() + index])
+            return int64(_types[function.typeOffset() + index])
         }
 
-        Value defaultLocal(int valueType) {
+        Value defaultLocal(int64 valueType) {
             return Value(valueType, 0, null, false)
         }
 
-        void contextualizeFrameFailure(int functionIndex) {
+        void contextualizeFrameFailure(int64 functionIndex) {
             if (_failure == null || _frames.length != 0 || functionIndex < 0 || functionIndex >= _functions.length) { return }
             FunctionInfo function = _functions[functionIndex] as FunctionInfo
             _failure = ExecutionResult(_failure.category(), 0, _failure.message(),
@@ -637,7 +637,7 @@ namespace CVMRun {
                 function.name(), 0, _steps)
         }
 
-        bool pushFrame(int functionIndex, int callOffset) {
+        bool pushFrame(int64 functionIndex, int64 callOffset) {
             if (functionIndex < 0 || functionIndex >= _functions.length) {
                 trap(ExecutionResult.RUNTIME_TRAP, "call target function index is invalid")
                 return false
@@ -647,21 +647,21 @@ namespace CVMRun {
                 return false
             }
             FunctionInfo function = _functions[functionIndex] as FunctionInfo
-            int argumentCount = function.parameters()
+            int64 argumentCount = function.parameters()
             Frame caller = currentFrame()
-            int available = _stack.length
+            int64 available = _stack.length
             if (caller != null) { available = available - caller.stackBase() }
             if (available < argumentCount) {
                 trap(ExecutionResult.RUNTIME_TRAP, "call argument stack underflow")
                 return false
             }
-            int argumentStart = _stack.length - argumentCount
+            int64 argumentStart = _stack.length - argumentCount
             if (_activeSlots + _stack.length + function.locals() > _limits.stackValues()) {
                 trap(ExecutionResult.RESOURCE_LIMIT, "active local and operand value limit exceeded")
                 contextualizeFrameFailure(functionIndex)
                 return false
             }
-            int index = 0
+            int64 index = 0
             while (index < argumentCount) {
                 Value argument = _stack[argumentStart + index] as Value
                 if (argument == null || !argument.initialized() || argument.valueType() != localType(function, index)) {
@@ -674,7 +674,7 @@ namespace CVMRun {
             list locals = []
             index = 0
             while (index < argumentCount + function.locals()) {
-                int slotType = localType(function, index)
+                int64 slotType = localType(function, index)
                 if (index < argumentCount) {
                     locals.append(_stack[argumentStart + index])
                 } else {
@@ -686,7 +686,7 @@ namespace CVMRun {
             list localIndexes = function.localArrayIndexes()
             index = 0
             while (index < localIndexes.length) {
-                int arrayIndex = localIndexes[index] as int
+                int64 arrayIndex = localIndexes[index] as int64
                 ArrayInfo info = _arrayInfos[arrayIndex] as ArrayInfo
                 ArrayInstance instance = createArray(arrayIndex, info)
                 if (instance == null) {
@@ -747,7 +747,7 @@ namespace CVMRun {
             return value
         }
 
-        Value popType(int expectedType) {
+        Value popType(int64 expectedType) {
             Value value = popAny()
             if (value == null || _failure != null) { return null }
             if (value.valueType() != expectedType) {
@@ -758,7 +758,7 @@ namespace CVMRun {
             return value
         }
 
-        String typeName(int valueType) {
+        String typeName(int64 valueType) {
             if (valueType == Value.I32) { return "i32" }
             if (valueType == Value.U8) { return "u8" }
             if (valueType == Value.FILE) { return "file" }
@@ -766,26 +766,26 @@ namespace CVMRun {
             return "invalid value"
         }
 
-        int readCodeByte(Frame frame, FunctionInfo function, int relativeOffset) {
+        int64 readCodeByte(Frame frame, FunctionInfo function, int64 relativeOffset) {
             if (relativeOffset < 0 || relativeOffset >= function.codeLength()) {
                 trap(ExecutionResult.RUNTIME_TRAP, "instruction operand extends past function")
                 return 0
             }
-            int absoluteOffset = function.codeOffset() + relativeOffset
+            int64 absoluteOffset = function.codeOffset() + relativeOffset
             if (absoluteOffset < 0 || absoluteOffset >= _code.length) {
                 trap(ExecutionResult.RUNTIME_TRAP, "instruction offset is outside CODE")
                 return 0
             }
-            return int(_code[absoluteOffset])
+            return int64(_code[absoluteOffset])
         }
 
-        int readOperand(Frame frame, FunctionInfo function, int width) {
-            int operandOffset = frame.pc()
+        int64 readOperand(Frame frame, FunctionInfo function, int64 width) {
+            int64 operandOffset = frame.pc()
             if (operandOffset < 0 || operandOffset > function.codeLength() || width > function.codeLength() - operandOffset) {
                 trap(ExecutionResult.RUNTIME_TRAP, "truncated instruction operand")
                 return 0
             }
-            int value = 0
+            int64 value = 0
             if (width == 1) {
                 value = readCodeByte(frame, function, operandOffset)
             }
@@ -799,7 +799,7 @@ namespace CVMRun {
             return value
         }
 
-        ArrayInstance arrayFor(Frame frame, int index) {
+        ArrayInstance arrayFor(Frame frame, int64 index) {
             if (index < 0 || index >= _arrayInfos.length) {
                 trap(ExecutionResult.RUNTIME_TRAP, "array index is invalid")
                 return null
@@ -823,9 +823,9 @@ namespace CVMRun {
             }
             list localIndexes = currentFunction().localArrayIndexes()
             list localArrays = frame.localArrays()
-            int localIndex = 0
+            int64 localIndex = 0
             while (localIndex < localIndexes.length) {
-                if ((localIndexes[localIndex] as int) == index) {
+                if ((localIndexes[localIndex] as int64) == index) {
                     if (localIndex >= localArrays.length) { break }
                     ArrayInstance instance = localArrays[localIndex] as ArrayInstance
                     if (instance == null || !instance.alive()) { break }
@@ -854,8 +854,8 @@ namespace CVMRun {
             return true
         }
 
-        int openResourceCount() {
-            int count = _fileHandles.length
+        int64 openResourceCount() {
+            int64 count = _fileHandles.length
             if (_stdinOpen) { count = count + 1 }
             return count
         }
@@ -868,8 +868,8 @@ namespace CVMRun {
             return true
         }
 
-        HostFile findFileHandle(int id, bool integerHandle) {
-            int index = 0
+        HostFile findFileHandle(int64 id, bool integerHandle) {
+            int64 index = 0
             while (index < _fileHandles.length) {
                 HostFile hostFile = _fileHandles[index] as HostFile
                 if (hostFile != null && hostFile.open() && hostFile.id() == id &&
@@ -882,12 +882,12 @@ namespace CVMRun {
         }
 
         void removeFileHandle(HostFile removed) {
-            int index = 0
+            int64 index = 0
             while (index < _fileHandles.length) {
                 HostFile hostFile = _fileHandles[index] as HostFile
                 if (hostFile != null && hostFile.id() == removed.id()) {
                     hostFile.invalidate()
-                    int last = _fileHandles.length - 1
+                    int64 last = _fileHandles.length - 1
                     if (index != last) { _fileHandles[index] = _fileHandles[last] }
                     _fileHandles.resize(last)
                     return
@@ -948,14 +948,14 @@ namespace CVMRun {
                 trap(ExecutionResult.RUNTIME_TRAP, "file path array must contain u8 elements")
                 return null
             }
-            int cursor = 0
+            int64 cursor = 0
             bool terminated = false
             while (cursor < instance.length() && !terminated && _failure == null) {
-                int first = int(instance.bytes()[cursor])
+                int64 first = int64(instance.bytes()[cursor])
                 if (first == 0) {
                     terminated = true
                 } else {
-                    int width = 1
+                    int64 width = 1
                     if (first >= 194 && first <= 223) { width = 2 }
                     else {
                         if (first >= 224 && first <= 239) { width = 3 }
@@ -975,9 +975,9 @@ namespace CVMRun {
                             "file path is not NUL-terminated valid UTF-8")
                         return null
                     }
-                    int continuationIndex = 1
+                    int64 continuationIndex = 1
                     while (continuationIndex < width) {
-                        int next = int(instance.bytes()[cursor + continuationIndex])
+                        int64 next = int64(instance.bytes()[cursor + continuationIndex])
                         bool validContinuation = next >= 128 && next <= 191
                         if (continuationIndex == 1) {
                             if (first == 224 && next < 160) { validContinuation = false }
@@ -1005,7 +1005,7 @@ namespace CVMRun {
                 return null
             }
             buffer encodedPath = buffer(cursor)
-            int index = 0
+            int64 index = 0
             while (index < cursor) {
                 encodedPath[index] = instance.bytes()[index]
                 index = index + 1
@@ -1019,7 +1019,7 @@ namespace CVMRun {
             }
         }
 
-        bool checkByteArrayRange(ArrayInstance instance, int offset, int count,
+        bool checkByteArrayRange(ArrayInstance instance, int64 offset, int64 count,
                                  bool allowZero, String operation) {
             if (instance.elementType() != Value.U8) {
                 trap(ExecutionResult.RUNTIME_TRAP,
@@ -1046,8 +1046,8 @@ namespace CVMRun {
                     "file mode must be a NUL-terminated u8 array containing exactly r, w, or a")
                 return null
             }
-            int mode = int(instance.bytes()[0])
-            if (int(instance.bytes()[1]) != 0 || (mode != 114 && mode != 119 && mode != 97)) {
+            int64 mode = int64(instance.bytes()[0])
+            if (int64(instance.bytes()[1]) != 0 || (mode != 114 && mode != 119 && mode != 97)) {
                 trap(ExecutionResult.RUNTIME_TRAP,
                     "file mode must be exactly r, w, or a followed by NUL")
                 return null
@@ -1085,7 +1085,7 @@ namespace CVMRun {
             return true
         }
 
-        bool executeService(int service) {
+        bool executeService(int64 service) {
             CVM.Service schema = CVM.Service()
             String serviceName = schema.name(service)
             if (serviceName.equals("")) {
@@ -1100,7 +1100,7 @@ namespace CVMRun {
                 if (!serviceAvailable(_capabilities.stdoutEnabled(), serviceName)) { return false }
                 String text = format("{}", value.number())
                 Sys.StandardIO io = Sys.StandardIO()
-                int written = -1
+                int64 written = -1
                 String error = ""
                 try {
                     written = io.write(text)
@@ -1125,9 +1125,9 @@ namespace CVMRun {
                 if (value == null || _failure != null) { return false }
                 if (!serviceAvailable(_capabilities.stdoutEnabled(), serviceName)) { return false }
                 buffer bytes = buffer(1)
-                bytes[0] = value.number()
+                bytes[0] = uint8(value.number())
                 Sys.StandardIO io = Sys.StandardIO()
-                int written = -1
+                int64 written = -1
                 String error = ""
                 try {
                     written = io.writeBytes(bytes)
@@ -1154,8 +1154,8 @@ namespace CVMRun {
                 if (offsetValue == null || _failure != null) { return false }
                 Value reference = popType(Value.ARRAY_REF)
                 if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
-                int offset = offsetValue.number()
-                int count = countValue.number()
+                int64 offset = offsetValue.number()
+                int64 count = countValue.number()
                 ArrayInstance instance = reference.array()
                 if (!checkByteArrayRange(instance, offset, count, true, "stdout_write")) { return false }
                 if (!serviceAvailable(_capabilities.stdoutEnabled(), serviceName)) { return false }
@@ -1163,7 +1163,7 @@ namespace CVMRun {
                 if (count == 0) { return push(Value(Value.I32, 0, null, true)) }
                 buffer chunk = instance.bytes()[offset:offset + count]
                 Sys.StandardIO io = Sys.StandardIO()
-                int written = -1
+                int64 written = -1
                 String error = ""
                 try {
                     written = io.writeBytes(chunk)
@@ -1211,7 +1211,7 @@ namespace CVMRun {
                     return false
                 }
                 if (byte.length == 1) {
-                    return push(Value(Value.I32, int(byte[0]), null, true))
+                    return push(Value(Value.I32, int64(byte[0]), null, true))
                 }
                 bool atEnd = false
                 try {
@@ -1259,10 +1259,10 @@ namespace CVMRun {
                         format("opening '{}': {}", path, caught.message))
                     return false
                 }
-                int handleId = _nextFileHandle
+                int64 handleId = _nextFileHandle
                 _nextFileHandle = _nextFileHandle + 1
                 _fileHandles.append(HostFile(handleId, file, integerHandle))
-                int resultType = Value.FILE
+                int64 resultType = Value.FILE
                 if (integerHandle) { resultType = Value.I32 }
                 return push(Value(resultType, handleId, null, true))
             }
@@ -1271,7 +1271,7 @@ namespace CVMRun {
                 bool integerHandle = service == CVM.Service.FILE_READ_HANDLE
                 Value capacityValue = popType(Value.I32)
                 if (capacityValue == null || _failure != null) { return false }
-                int offset = 0
+                int64 offset = 0
                 if (!integerHandle) {
                     Value offsetValue = popType(Value.I32)
                     if (offsetValue == null || _failure != null) { return false }
@@ -1279,11 +1279,11 @@ namespace CVMRun {
                 }
                 Value reference = popType(Value.ARRAY_REF)
                 if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
-                int handleType = Value.FILE
+                int64 handleType = Value.FILE
                 if (integerHandle) { handleType = Value.I32 }
                 Value fileValue = popType(handleType)
                 if (fileValue == null || _failure != null) { return false }
-                int capacity = capacityValue.number()
+                int64 capacity = capacityValue.number()
                 ArrayInstance instance = reference.array()
                 if (!checkByteArrayRange(instance, offset, capacity, integerHandle, serviceName)) { return false }
                 HostFile hostFile = findFileHandle(fileValue.number(), integerHandle)
@@ -1321,7 +1321,7 @@ namespace CVMRun {
                         return false
                     }
                 }
-                int index = 0
+                int64 index = 0
                 while (index < bytes.length) {
                     instance.bytes()[offset + index] = bytes[index]
                     index = index + 1
@@ -1333,7 +1333,7 @@ namespace CVMRun {
                 bool integerHandle = service == CVM.Service.FILE_WRITE_HANDLE
                 Value countValue = popType(Value.I32)
                 if (countValue == null || _failure != null) { return false }
-                int offset = 0
+                int64 offset = 0
                 if (!integerHandle) {
                     Value offsetValue = popType(Value.I32)
                     if (offsetValue == null || _failure != null) { return false }
@@ -1341,11 +1341,11 @@ namespace CVMRun {
                 }
                 Value reference = popType(Value.ARRAY_REF)
                 if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
-                int handleType = Value.FILE
+                int64 handleType = Value.FILE
                 if (integerHandle) { handleType = Value.I32 }
                 Value fileValue = popType(handleType)
                 if (fileValue == null || _failure != null) { return false }
-                int count = countValue.number()
+                int64 count = countValue.number()
                 ArrayInstance instance = reference.array()
                 if (!checkByteArrayRange(instance, offset, count, true, serviceName)) { return false }
                 HostFile hostFile = findFileHandle(fileValue.number(), integerHandle)
@@ -1357,7 +1357,7 @@ namespace CVMRun {
                 if (!canPushServiceResult()) { return false }
                 if (count == 0) { return push(Value(Value.I32, 0, null, true)) }
                 buffer chunk = instance.bytes()[offset:offset + count]
-                int written = -1
+                int64 written = -1
                 String error = ""
                 try {
                     written = hostFile.file().writeBytes(chunk)
@@ -1375,7 +1375,7 @@ namespace CVMRun {
 
             if (service == CVM.Service.FILE_CLOSE || service == CVM.Service.FILE_CLOSE_HANDLE) {
                 bool integerHandle = service == CVM.Service.FILE_CLOSE_HANDLE
-                int handleType = Value.FILE
+                int64 handleType = Value.FILE
                 if (integerHandle) { handleType = Value.I32 }
                 Value fileValue = popType(handleType)
                 if (fileValue == null || _failure != null) { return false }
@@ -1395,7 +1395,7 @@ namespace CVMRun {
 
         void freeFrame(Frame frame) {
             list arrays = frame.localArrays()
-            int index = 0
+            int64 index = 0
             while (index < arrays.length) {
                 ArrayInstance instance = arrays[index] as ArrayInstance
                 if (instance != null && instance.alive()) {
@@ -1408,7 +1408,7 @@ namespace CVMRun {
             frame.kill()
         }
 
-        bool doReturn(int returnType) {
+        bool doReturn(int64 returnType) {
             Frame frame = currentFrame()
             FunctionInfo function = currentFunction()
             if (function.returnType() != returnType) {
@@ -1417,7 +1417,7 @@ namespace CVMRun {
                         typeName(function.returnType()), typeName(returnType)))
                 return false
             }
-            int expectedValues = 0
+            int64 expectedValues = 0
             if (returnType != 0) { expectedValues = 1 }
             if (_stack.length != frame.stackBase() + expectedValues) {
                 trap(ExecutionResult.RUNTIME_TRAP, "return has extra or missing operand stack values")
@@ -1428,8 +1428,8 @@ namespace CVMRun {
                 returned = popType(returnType)
                 if (returned == null || _failure != null) { return false }
             }
-            int functionIndex = frame.functionIndex()
-            int callerOffset = frame.callOffset()
+            int64 functionIndex = frame.functionIndex()
+            int64 callerOffset = frame.callOffset()
             freeFrame(frame)
             _frames.resize(_frames.length - 1)
             if (_frames.length == 0) {
@@ -1448,7 +1448,7 @@ namespace CVMRun {
             return true
         }
 
-        bool compareValues(int opcode) {
+        bool compareValues(int64 opcode) {
             Value right = popType(Value.I32)
             if (right == null || _failure != null) { return false }
             Value left = popType(Value.I32)
@@ -1460,19 +1460,19 @@ namespace CVMRun {
             if (opcode == CVM.Opcode.LE_I32) { result = left.number() <= right.number() }
             if (opcode == CVM.Opcode.GT_I32) { result = left.number() > right.number() }
             if (opcode == CVM.Opcode.GE_I32) { result = left.number() >= right.number() }
-            int number = 0
+            int64 number = 0
             if (result) { number = 1 }
             return push(Value(Value.I32, number, null, true))
         }
 
-        bool binaryI32(int opcode) {
+        bool binaryI32(int64 opcode) {
             Value right = popType(Value.I32)
             if (right == null || _failure != null) { return false }
             Value left = popType(Value.I32)
             if (left == null || _failure != null) { return false }
-            int a = left.number()
-            int b = right.number()
-            int result = 0
+            int64 a = left.number()
+            int64 b = right.number()
+            int64 result = 0
             if (opcode == CVM.Opcode.ADD_I32) { result = a + b }
             if (opcode == CVM.Opcode.SUB_I32) { result = a - b }
             if (opcode == CVM.Opcode.MUL_I32) { result = a * b }
@@ -1512,24 +1512,24 @@ namespace CVMRun {
                 return false
             }
             _steps = _steps + 1
-            int opcode = readCodeByte(frame, function, frame.pc())
+            int64 opcode = readCodeByte(frame, function, frame.pc())
             if (_failure != null) { return false }
             frame.setPc(frame.pc() + 1)
 
             if (opcode == CVM.Opcode.NOP) { return true }
             if (opcode == CVM.Opcode.CONST_I32) {
-                int value = readOperand(frame, function, 4)
+                int64 value = readOperand(frame, function, 4)
                 if (_failure != null) { return false }
                 if (value >= 2147483648) { value = value - 4294967296 }
                 return push(Value(Value.I32, value, null, true))
             }
             if (opcode == CVM.Opcode.CONST_U8) {
-                int value = readOperand(frame, function, 1)
+                int64 value = readOperand(frame, function, 1)
                 if (_failure != null) { return false }
                 return push(Value(Value.U8, value, null, true))
             }
             if (opcode == CVM.Opcode.LDLOC || opcode == CVM.Opcode.STLOC) {
-                int index = readOperand(frame, function, 2)
+                int64 index = readOperand(frame, function, 2)
                 if (_failure != null) { return false }
                 list locals = frame.locals()
                 if (index < 0 || index >= locals.length) {
@@ -1554,7 +1554,7 @@ namespace CVMRun {
                 return push(stored)
             }
             if (opcode == CVM.Opcode.LDGLOBAL || opcode == CVM.Opcode.STGLOBAL) {
-                int index = readOperand(frame, function, 2)
+                int64 index = readOperand(frame, function, 2)
                 if (_failure != null) { return false }
                 if (index < 0 || index >= _globals.length) {
                     trap(ExecutionResult.RUNTIME_TRAP, "global index is invalid")
@@ -1574,7 +1574,7 @@ namespace CVMRun {
                 return push(stored)
             }
             if (opcode == CVM.Opcode.ARRAY) {
-                int index = readOperand(frame, function, 2)
+                int64 index = readOperand(frame, function, 2)
                 if (_failure != null) { return false }
                 ArrayInstance instance = arrayFor(frame, index)
                 if (instance == null || _failure != null) { return false }
@@ -1596,18 +1596,18 @@ namespace CVMRun {
                 Value reference = popType(Value.ARRAY_REF)
                 if (reference == null || _failure != null || !validArrayReference(reference)) { return false }
                 ArrayInstance instance = reference.array()
-                int index = indexValue.number()
+                int64 index = indexValue.number()
                 if (index < 0 || index >= instance.length()) {
                     trap(ExecutionResult.RUNTIME_TRAP, "array index is out of bounds")
                     return false
                 }
                 if (opcode == CVM.Opcode.AGET) {
-                    int value = 0
+                    int64 value = 0
                     if (instance.elementType() == Value.U8) {
-                        value = int(instance.bytes()[index])
+                        value = int64(instance.bytes()[index])
                     } else {
-                        int at = index * 4
-                        value = int(instance.bytes()[at]) + int(instance.bytes()[at + 1]) * 256 + int(instance.bytes()[at + 2]) * 65536 + int(instance.bytes()[at + 3]) * 16777216
+                        int64 at = index * 4
+                        value = int64(instance.bytes()[at]) + int64(instance.bytes()[at + 1]) * 256 + int64(instance.bytes()[at + 2]) * 65536 + int64(instance.bytes()[at + 3]) * 16777216
                         if (value >= 2147483648) { value = value - 4294967296 }
                     }
                     return push(Value(instance.elementType(), value, null, true))
@@ -1617,15 +1617,15 @@ namespace CVMRun {
                     return false
                 }
                 if (instance.elementType() == Value.U8) {
-                    instance.bytes()[index] = stored.number()
+                    instance.bytes()[index] = uint8(stored.number())
                 } else {
-                    int value = stored.number()
+                    int64 value = stored.number()
                     if (value < 0) { value = value + 4294967296 }
-                    int at = index * 4
-                    instance.bytes()[at] = value % 256
-                    instance.bytes()[at + 1] = (value / 256) % 256
-                    instance.bytes()[at + 2] = (value / 65536) % 256
-                    instance.bytes()[at + 3] = (value / 16777216) % 256
+                    int64 at = index * 4
+                    instance.bytes()[at] = uint8(value % 256)
+                    instance.bytes()[at + 1] = uint8((value / 256) % 256)
+                    instance.bytes()[at + 2] = uint8((value / 65536) % 256)
+                    instance.bytes()[at + 3] = uint8((value / 16777216) % 256)
                 }
                 return push(stored)
             }
@@ -1676,7 +1676,7 @@ namespace CVMRun {
                 return true
             }
             if (opcode == CVM.Opcode.JMP || opcode == CVM.Opcode.JZ) {
-                int target = readOperand(frame, function, 4)
+                int64 target = readOperand(frame, function, 4)
                 if (_failure != null) { return false }
                 bool take = true
                 if (opcode == CVM.Opcode.JZ) {
@@ -1694,7 +1694,7 @@ namespace CVMRun {
                 return true
             }
             if (opcode == CVM.Opcode.CALL) {
-                int target = readOperand(frame, function, 2)
+                int64 target = readOperand(frame, function, 2)
                 if (_failure != null) { return false }
                 return pushFrame(target, _activeOffset)
             }
@@ -1703,7 +1703,7 @@ namespace CVMRun {
             if (opcode == CVM.Opcode.RET_U8) { return doReturn(Value.U8) }
             if (opcode == CVM.Opcode.RET_FILE) { return doReturn(Value.FILE) }
             if (opcode == CVM.Opcode.SYS) {
-                int service = readOperand(frame, function, 1)
+                int64 service = readOperand(frame, function, 1)
                 if (_failure != null) { return false }
                 return executeService(service)
             }

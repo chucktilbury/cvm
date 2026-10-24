@@ -96,6 +96,10 @@ class CvmLibraryTests(unittest.TestCase):
             )
             installed_package = install_prefix / "share/cwhip/modules/cvm"
             self.assertTrue((installed_package / "1.0.0/cwhip-package.toml").is_file())
+            self.assertIn(
+                'sdk-abi = "numeric-v2"',
+                (installed_package / "1.0.0/cwhip-package.toml").read_text(),
+            )
             consumer = root / "external-consumer"
             module_path = consumer / "modules/cvm"
             module_path.parent.mkdir(parents=True)

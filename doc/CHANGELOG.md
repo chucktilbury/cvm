@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Migrate CVM's Cwhip sources and packages to the `numeric-v2` SDK ABI.
+  Building now requires Cwhip 0.0.2 with the ABI marker from
+  [chucktilbury/cwhip#25](https://github.com/chucktilbury/cwhip/pull/25).
+  Generated parser source is normalized for cparsegen's legacy `int` spelling.
 - Add backward-compatible integer file services 9..12: `file_open` with
   exact binary `r`/`w`/`a` modes, bounded index-zero `file_read_handle` and
   `file_write_handle` returning actual progress, and `file_close_handle`.
