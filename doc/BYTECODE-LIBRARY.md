@@ -33,11 +33,15 @@ headers, native shims, or build-time dependency on the CVM source tree.
   function/global/array records, and serializes the v1 header and directory.
   `addFunction` consumes already encoded code and parameter/local type bytes;
   the instruction builder can be used to produce the code. `addArray` accepts
-  either an initializer buffer of the exact element width or an empty buffer
-  for zero-initialized storage. `encode` returns `CVM.BuildResult` and rejects
-  invalid or oversized containers. `setDebug` adds the optional DEBUG table;
+  either an initializer buffer of exactly `length * element_width` bytes
+  (width 4 for i32, 1 for u8), or an empty buffer for zero-initialized storage.
+  Nonempty initializers are not padded by this API. `encode` returns
+  `CVM.BuildResult` and rejects invalid or oversized containers.
+  `setDebug` adds the optional DEBUG table;
   `addOptionalSection` adds unknown optional records (including IDs below the
   known required sections) and emits them in ascending directory order.
+  Callers must add optional section kinds in strictly increasing order;
+  duplicate or out-of-order kinds are rejected rather than sorted.
 - `CVM.ContainerValidator.validate(buffer)` returns
   `CVM.ValidationResult`; callers inspect `valid`, `code`, `section`, `offset`,
   and `message` rather than parsing a display string.

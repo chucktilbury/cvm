@@ -74,7 +74,8 @@ build_type = "Release"
 These values describe the actual Cwhip installation prefix and the build
 configuration used to produce that SDK. CVM calls the SDK's
 `cwhip_apply_application_defaults()` helper after finding Cwhip but before
-`project()`. The helper provides defaults for `CMAKE_INSTALL_PREFIX` and
+`project()`. For a registration whose `sdk_prefix` matches the selected SDK,
+the helper provides defaults for `CMAKE_INSTALL_PREFIX` and
 `CMAKE_BUILD_TYPE`; explicit command-line values and values already stored in
 the build cache, including empty values, take precedence. Explicit
 `CMAKE_INSTALL_PREFIX` and `CMAKE_BUILD_TYPE` environment values also take
@@ -90,14 +91,18 @@ export CWHIP_SDK="/path/to/cwhip-sdk"
 ./scripts/setup
 ```
 
-An explicit non-empty `CWHIP_SDK` bypasses both configuration files entirely, even
-if they are malformed. An unset or empty override allows settings discovery.
+An explicit non-empty `CWHIP_SDK` bypasses both configuration files for SDK
+prefix selection and TOML validation, even if they are malformed. The SDK's
+application-defaults helper is still called and may read a matching registration
+from `sdk.toml`; this override does not disable application defaults.
+An unset or empty override allows settings discovery.
 A missing file or absent top-level key leaves normal CMake discovery unchanged.
 An existing `sdk.toml` is authoritative even without a top-level `sdk_prefix`:
 it never falls back to legacy preferences. An explicitly empty `sdk_prefix`
-is invalid, not an instruction to use legacy preferences. Malformed TOML, an
-invalid value, or an unreadable selected configuration file stops configuration
-with a diagnostic; it does not silently select another SDK.
+is invalid, not an instruction to use legacy preferences. When discovering a
+prefix from configuration, malformed TOML, an invalid value, or an unreadable
+selected configuration file stops configuration with a diagnostic; it does not
+silently select another SDK.
 
 When either `CWHIP_SDK` or `sdk_prefix` selects a prefix, CMake searches only
 that prefix and clears the previously cached `Cwhip_DIR`. A prefix without a
@@ -187,13 +192,16 @@ Run the discovery regression suite with Python 3.11+, CMake 3.24+, and a host
 C compiler:
 
 ```sh
-python3 -m unittest discover -s tests -v
+python3 -m unittest discover -s tests -p test_sdk_discovery.py -v
 ```
 
 The discovery suite uses temporary mock SDK packages, a mock build-time
 generator and isolated home directories.
 It exercises real CMake configuration, setup's shell handoff, and the shell's
 SDK search path without requiring an installed CWhip compiler or user input.
+The filename filter excludes the installed-consumer suites, which require
+both `CWHIP_SDK` and `CVM_BUILD_DIR`; CTest supplies these for the configured
+build below.
 
 The bytecode and assembler installed-consumer conformance tests use the selected
 installed CWhip SDK. Configure and build first, then run:

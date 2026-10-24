@@ -52,8 +52,10 @@ cmake --build .
 ../bin/cvm-run hello.cvm
 ```
 
-The default build type is `debug`. Choose `release` or `profile` with
-`./scripts/setup release` or `./scripts/setup profile`.
+Without an argument, setup preserves the existing CMake cache or uses the SDK's
+registered build type; if neither supplies one, the build type remains empty. Choose
+`debug`, `release`, or `profile` explicitly with `./scripts/setup debug`,
+`./scripts/setup release`, or `./scripts/setup profile`.
 
 See [Building](doc/BUILDING.md) for SDK selection and output-directory
 customization, and [Project shell](doc/PROJECT-SHELL.md) for the shell
