@@ -1,17 +1,17 @@
 # Building
 
-This starter consumes the installed CWhip SDK; it does not build or download
+CVM consumes the installed CWhip SDK; it does not build or download
 the compiler or SDK for you. Use the complete SDK installation prefix, not
 just its `bin/` directory. CMake requires Cwhip SDK version `0.0.2`, the
 `numeric-v2` ABI, and an
 installation that supports configurable application output directories and
 the public binary `File.readBytes`, `readAllBytes`, and `writeBytes` APIs.
 The numeric ABI and public C header are checked during configuration, and
-configuration also checks the binary file API signatures. Build the SDK with
-[chucktilbury/cwhip#25](https://github.com/chucktilbury/cwhip/pull/25) (which
-includes the binary file APIs from
-[chucktilbury/cwhip#20](https://github.com/chucktilbury/cwhip/pull/20)) before
-building CVM. No SDK is built, downloaded or overwritten by CVM.
+configuration also checks the binary file API signatures. Use a current SDK
+with parenthesized keyword arguments (`return(value)` and `raise(error)`),
+postfix callable types (`int64<int64>`), and bracket dictionary literals
+(`[key: value]`, `[:]`). An older numeric-v2 SDK is not necessarily
+source-compatible. No SDK is built, downloaded or overwritten by CVM.
 
 The installed SDK must also provide `cwhip_apply_application_defaults`
 ([chucktilbury/cwhip#21](https://github.com/chucktilbury/cwhip/pull/21) or newer).
@@ -20,12 +20,25 @@ the SDK at the selected prefix before configuring CVM. Configuration reports
 that prefix and an actionable error when this capability is missing; it does
 not silently fall back to older behavior.
 
-An installed cparsegen supporting `--library` is also required at build time.
+An installed cparsegen supporting `--library` and emitting the current CWhip
+syntax with explicit `int64` parser indices is also required at build time.
 Put its executable on `PATH` or pass
 `-DCPARSEGEN_EXECUTABLE=/absolute/path/to/cparsegen` to CMake. It generates
 CWhip from the CVM-owned `grammar/assembly.cpg` in `build/assembler/`.
 No cparsegen source checkout is required or used by CVM, and the installed
 assembler needs neither the generator nor its grammar at runtime.
+The generated source is compiled as emitted; CVM does not rewrite legacy
+types or keyword syntax. Upgrade cparsegen as well as the SDK when migrating
+an older installation.
+
+CVM's assembly language is independent of CWhip syntax: assembly semicolon
+comments and brace-delimited array initializers remain unchanged. The CWhip
+implementation uses parenthesized return expressions; it contains no callable
+types, dictionary literals, or mixed bitwise/comparison expressions requiring
+additional migration.
+
+Use a fresh build directory after updating the SDK or cparsegen so package
+locks and generated parser sources are recreated for the selected tools.
 
 ## Select an SDK
 
@@ -201,7 +214,8 @@ It exercises real CMake configuration, setup's shell handoff, and the shell's
 SDK search path without requiring an installed CWhip compiler or user input.
 The filename filter excludes the installed-consumer suites, which require
 both `CWHIP_SDK` and `CVM_BUILD_DIR`; CTest supplies these for the configured
-build below.
+build below. The discovery suite is also registered with CTest, so a full
+CTest run covers both discovery and installed consumers.
 
 The bytecode and assembler installed-consumer conformance tests use the selected
 installed CWhip SDK. Configure and build first, then run:

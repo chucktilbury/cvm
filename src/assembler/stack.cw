@@ -6,10 +6,10 @@ class StackDepth {
     int64 target(Function function, int64 offset) {
         int64 index = 0
         while (index < function.instructions.length) {
-            if ((function.instructions[index] as Instruction).offset == offset) { return index }
+            if ((function.instructions[index] as Instruction).offset == offset) { return(index) }
             index = index + 1
         }
-        return -1
+        return(-1)
     }
 
     void enqueue(Function function, list depths, list pending, int64 index, int64 depth, Instruction origin) {
@@ -85,6 +85,6 @@ class StackDepth {
                 if (op != CVM.Opcode.JMP) { enqueue(function, depths, pending, at + 1, depth, instruction) }
             }
         }
-        return maximumDepth
+        return(maximumDepth)
     }
 }

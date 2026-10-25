@@ -5,7 +5,7 @@ approved v1 bytecode format and assembly syntax are described in the
 [specification](doc/BYTECODE-ASSEMBLY.md).
 
 The versioned `cvm` shared bytecode
-package (`CVM`, version `1.0.0`). It provides canonical v1 format/opcode
+package (`CVM`, version `1.0.0`) provides canonical v1 format/opcode
 definitions, checked byte readers and writers, instruction and container
 builders, and structural validation. The package is installed under
 `share/cwhip/modules/cvm/1.0.0` for import by other CWhip applications.
@@ -29,35 +29,7 @@ shared-library boundary and APIs are documented in
 See [Assembler usage and contract](doc/ASSEMBLER.md). The template
 `src/main.cw` hello-world remains as a build-shell example.
 
-## Get started
-
-Install the complete CWhip SDK prefix (including the public `File.readBytes`,
-`readAllBytes`, and `writeBytes` APIs) and cparsegen. Put cparsegen on `PATH`
-or configure `-DCPARSEGEN_EXECUTABLE=/absolute/path/to/cparsegen`.
-SDK selection
-uses a non-empty `CWHIP_SDK` override first, then the top-level `sdk_prefix`
-string in `$XDG_CONFIG_HOME/cwhip/sdk.toml` (or
-`$HOME/.config/cwhip/sdk.toml` when `XDG_CONFIG_HOME` is unset/empty).
-Only when `sdk.toml` is absent is the legacy `settings.toml` consulted.
-Without a selected prefix, use normal CMake discovery
-through `CMAKE_PREFIX_PATH` or `Cwhip_DIR`. Both direct CMake configuration and
-`scripts/setup` use this order. Reading settings requires Python 3.11+.
-Then start the project shell and build:
-
-```sh
-./scripts/setup
-cmake --build .
-../bin/hello
-../bin/cvm-as ../tests/fixtures/hello.asm -o hello.cvm
-../bin/cvm-run hello.cvm
-```
-
-Without an argument, setup preserves the existing CMake cache or uses the SDK's
-registered build type; if neither supplies one, the build type remains empty. Choose
-`debug`, `release`, or `profile` explicitly with `./scripts/setup debug`,
-`./scripts/setup release`, or `./scripts/setup profile`.
-
-See [Building](doc/BUILDING.md) for SDK selection and output-directory
+See [Building](doc/BUILDING.md) for prerequisites, SDK selection and output-directory
 customization, and [Project shell](doc/PROJECT-SHELL.md) for the shell
 environment and available commands. See the [changelog](doc/CHANGELOG.md) for
 implementation history.

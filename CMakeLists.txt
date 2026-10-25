@@ -145,10 +145,7 @@ add_custom_command(OUTPUT "${assembler_work}/parser.cw"
     COMMAND "${CMAKE_COMMAND}" -E rm -f "${assembler_work}/parser.cw"
     COMMAND "${CPARSEGEN_EXECUTABLE}" --library
         "${PROJECT_SOURCE_DIR}/grammar/assembly.cpg" "${assembler_work}/parser.cw"
-    COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/migrate-generated-parser.py"
-        "${assembler_work}/parser.cw"
     DEPENDS "${PROJECT_SOURCE_DIR}/grammar/assembly.cpg" "${CPARSEGEN_EXECUTABLE}"
-        "${PROJECT_SOURCE_DIR}/scripts/migrate-generated-parser.py"
     VERBATIM)
 add_custom_command(OUTPUT "${assembler_binary}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CWHIP_BIN_DIR}"
@@ -201,6 +198,9 @@ install(PROGRAMS "${runner_binary}" DESTINATION bin)
 
 if(BUILD_TESTING)
     find_program(Python3_EXECUTABLE NAMES python3 REQUIRED)
+    add_test(NAME cvm_sdk_discovery
+        COMMAND "${Python3_EXECUTABLE}" -m unittest discover
+            -s "${PROJECT_SOURCE_DIR}/tests" -p test_sdk_discovery.py)
     add_test(NAME cvm_installed_library
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_cvm_library.py")
     set_tests_properties(cvm_installed_library PROPERTIES

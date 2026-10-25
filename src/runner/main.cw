@@ -4,23 +4,23 @@ import system as Sys
 
 class RunnerCLI {
     int64 parseLimit(String text, int64 maximum, bool allowZero) {
-        if (text.length == 0) { return -1 }
+        if (text.length == 0) { return(-1) }
         int64 value = 0
         int64 index = 0
         while (index < text.length) {
             int64 byte = int64(text.byteAt(index))
-            if (byte < 48 || byte > 57) { return -1 }
+            if (byte < 48 || byte > 57) { return(-1) }
             int64 digit = byte - 48
-            if (value > (maximum - digit) / 10) { return -1 }
+            if (value > (maximum - digit) / 10) { return(-1) }
             value = value * 10 + digit
             index = index + 1
         }
-        if (!allowZero && value == 0) { return -1 }
-        return value
+        if (!allowZero && value == 0) { return(-1) }
+        return(value)
     }
 
     String usage() {
-        return "usage: cvm-run [--max-program-bytes N] [--max-instructions N] [--max-stack-values N] [--max-call-depth N] [--max-heap-bytes N] [--max-open-files N] [--no-stdin] [--no-stdout] [--no-files] INPUT.cvm"
+        return("usage: cvm-run [--max-program-bytes N] [--max-instructions N] [--max-stack-values N] [--max-call-depth N] [--max-heap-bytes N] [--max-open-files N] [--no-stdin] [--no-stdout] [--no-files] INPUT.cvm")
     }
 
     void usageError() {
@@ -31,7 +31,7 @@ class RunnerCLI {
         Sys.Process process = Sys.Process()
         if (process.argc() == 2 && process.arg(1).equals("--help")) {
             Sys.StandardIO().writeLine(usage())
-            return 0
+            return(0)
         }
 
         VM.Limits defaults = VM.Limits()
@@ -64,7 +64,7 @@ class RunnerCLI {
                         if (argument.equals("--max-program-bytes") || argument.equals("--max-instructions") || argument.equals("--max-stack-values") || argument.equals("--max-call-depth") || argument.equals("--max-heap-bytes") || argument.equals("--max-open-files")) {
                             if (index + 1 >= process.argc()) {
                                 usageError()
-                                return 2
+                                return(2)
                             }
                             int64 maximum = VM.Limits.MAX_PROGRAM_BYTES
                             bool allowZero = false
@@ -83,7 +83,7 @@ class RunnerCLI {
                             int64 value = parseLimit(process.arg(index + 1), maximum, allowZero)
                             if (value < 0) {
                                 usageError()
-                                return 2
+                                return(2)
                             }
                             if (argument.equals("--max-program-bytes")) { programBytes = value }
                             if (argument.equals("--max-instructions")) { instructions = value }
@@ -95,7 +95,7 @@ class RunnerCLI {
                         } else {
                             if (!input.equals("")) {
                                 usageError()
-                                return 2
+                                return(2)
                             }
                             input = argument
                             index = index + 1
@@ -106,14 +106,14 @@ class RunnerCLI {
         }
         if (input.equals("")) {
             usageError()
-            return 2
+            return(2)
         }
         VM.Limits limits = VM.Limits(programBytes, instructions, stackValues, callDepth, heapBytes)
         VM.Capabilities capabilities = VM.Capabilities(stdinEnabled, stdoutEnabled,
             filesEnabled, maxOpenFiles)
         if (!limits.valid() || !capabilities.valid()) {
             usageError()
-            return 2
+            return(2)
         }
 
         IO.Result loaded = IO.Files().readLimited(input, limits.programBytes())
@@ -121,7 +121,7 @@ class RunnerCLI {
             String category = "load"
             if (loaded.category() == IO.Result.LIMIT_EXCEEDED) { category = "resource limit" }
             Sys.StandardIO().writeErrorLine(format("{}: {}: {}", input, category, loaded.error()))
-            return 1
+            return(1)
         }
         VM.ExecutionResult result = VM.VirtualMachine().run(loaded.bytes(), limits, capabilities)
         if (result.ok()) {
@@ -142,9 +142,9 @@ class RunnerCLI {
             if (!error.equals("") || written != summary.length + 1) {
                 if (error.equals("")) { error = "incomplete stdout write" }
                 Sys.StandardIO().writeErrorLine(format("stdout: I/O error: {}", error))
-                return 1
+                return(1)
             }
-            return 0
+            return(0)
         }
 
         String category = "runtime trap"
@@ -171,7 +171,7 @@ class RunnerCLI {
         if (!detail.equals("")) { diagnostic.append(format(":{}", detail)) }
         diagnostic.append(format(": {}", result.message()))
         Sys.StandardIO().writeErrorLine(diagnostic)
-        return 1
+        return(1)
     }
 }
 
