@@ -2,10 +2,17 @@
 
 ## Unreleased
 
+- Parenthesize return expressions throughout the assembler, runner and
+  `cvm`, `cvmfile`, and `cvmrun` packages.
+- Compile the current cparsegen output directly instead of rewriting its
+  legacy `int` spelling; require an updated generator and SDK together.
+- Keep CVM assembly syntax, v1 bytecode and package APIs unchanged.
+- Include SDK discovery and project-shell regression tests in full CTest runs.
+
 - Migrate CVM's Cwhip sources and packages to the `numeric-v2` SDK ABI.
   Building now requires Cwhip 0.0.2 with the ABI marker from
   [chucktilbury/cwhip#25](https://github.com/chucktilbury/cwhip/pull/25).
-  Generated parser source is normalized for cparsegen's legacy `int` spelling.
+  Current builds require native `int64` output from the updated cparsegen.
 - Add backward-compatible integer file services 9..12: `file_open` with
   exact binary `r`/`w`/`a` modes, bounded index-zero `file_read_handle` and
   `file_write_handle` returning actual progress, and `file_close_handle`.

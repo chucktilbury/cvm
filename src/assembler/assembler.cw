@@ -40,10 +40,10 @@ class Assembler {
         int64 index = 0
         while (index < symbols.length) {
             Symbol symbol = symbols[index] as Symbol
-            if (symbol.name.equals(name)) { return symbol.value }
+            if (symbol.name.equals(name)) { return(symbol.value) }
             index = index + 1
         }
-        return -1
+        return(-1)
     }
 
     void declare(list symbols, String name, int64 value, int64 row, int64 col) {
@@ -113,7 +113,7 @@ class Assembler {
         if (!version) {
             if (!kind.equals("version")) { fail("file must start with .version 1.0", row, col) }
             version = true
-            return
+            return()
         }
         if (kind.equals("version")) { fail("duplicate .version", row, col) }
         if (entry.equals("")) {
@@ -121,7 +121,7 @@ class Assembler {
             entry = node.childAt(1).lexeme()
             entryLine = row
             if (!entry.equals("main")) { fail("v1 entry must be main() -> i32", row, source.column(node.childAt(1))) }
-            return
+            return()
         }
         if (kind.equals("entry")) { fail("duplicate .entry", row, col) }
         if (kind.equals("array_decl")) { arrayDeclaration(node, source)
@@ -135,7 +135,7 @@ class Assembler {
             int64 value = source.scalar(node.childAt(5), valueType, literals)
             declare(globalNames, name, globals.length, row, source.column(node.childAt(1)))
             globals.append(GlobalDeclaration(name, valueType, value))
-            return
+            return()
         }
         if (kind.equals("function_decl")) {
             if (current != null) { fail("nested function", row, col) }
@@ -154,24 +154,24 @@ class Assembler {
                 if (current.parameters > 65535) { fail("too many parameters", row, col) }
                 index = index + 2
             }
-            return
+            return()
         }
         if (current == null) { fail("expected declaration outside function", row, col) }
         if (kind.equals("end_decl")) {
             if (current.length == 0) { fail("function must contain instructions", row, col) }
             current = null
-            return
+            return()
         }
         if (kind.equals("local_decl")) {
             int64 valueType = literals.valueType(node.childAt(3).lexeme(), false, row, source.column(node.childAt(3)))
             if (current.types.length - current.parameters >= 65535) { fail("too many locals", row, col) }
             local(node.childAt(1).lexeme(), valueType, row, source.column(node.childAt(1)))
-            return
+            return()
         }
         current.started = true
         if (kind.equals("label")) {
             declare(current.labels, node.childAt(0).lexeme(), current.length, row, col)
-            return
+            return()
         }
         if (!kind.equals("instruction")) { fail("unexpected directive", row, col) }
         String mnemonic = node.childAt(0).lexeme()
@@ -206,7 +206,7 @@ class Assembler {
     int64 resolve(list names, String name, Instruction instruction) {
         int64 index = find(names, name)
         if (index < 0) { fail(format("unresolved symbol '{}'", name), instruction.line, instruction.column) }
-        return index
+        return(index)
     }
 
     buffer encode(buffer text) {
@@ -285,7 +285,7 @@ class Assembler {
         if (!result.ok()) { fail(result.message(), 1, 1) }
         CVM.ValidationResult validation = CVM.ContainerValidator().validate(result.bytes())
         if (!validation.valid()) { fail(format("structural validation: {}", validation.message()), 1, 1) }
-        return result.bytes()
+        return(result.bytes())
     }
 }
 
@@ -294,11 +294,11 @@ class AssemblerCLI {
         Sys.Process process = Sys.Process()
         if (process.argc() == 2 && process.arg(1).equals("--help")) {
             Sys.StandardIO().writeLine("usage: cvm-as INPUT.asm -o OUTPUT.cvm")
-            return 0
+            return(0)
         }
         if (process.argc() != 4 || !process.arg(2).equals("-o")) {
             Sys.StandardIO().writeErrorLine("usage: cvm-as INPUT.asm -o OUTPUT.cvm")
-            return 2
+            return(2)
         }
         String input = process.arg(1)
         try {
@@ -310,12 +310,12 @@ class AssemblerCLI {
         } except(AssemblyError) as diagnostic {
             AssemblyError located = diagnostic as AssemblyError
             Sys.StandardIO().writeErrorLine(format("{}:{}:{}: {}", input, located.line, located.column, located.message))
-            return 1
+            return(1)
         } except(Exception) as error {
             Sys.StandardIO().writeErrorLine(format("{}: I/O: {}", input, error.message))
-            return 1
+            return(1)
         }
-        return 0
+        return(0)
     }
 }
 

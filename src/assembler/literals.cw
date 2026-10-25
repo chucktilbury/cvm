@@ -2,20 +2,20 @@ class Literals {
     void fail(String message, int64 row, int64 col) { raise(AssemblyError(message, row, col)) }
 
     int64 digit(int64 byte) {
-        if (byte >= 48 && byte <= 57) { return byte - 48 }
-        if (byte >= 65 && byte <= 70) { return byte - 55 }
-        if (byte >= 97 && byte <= 102) { return byte - 87 }
-        return -1
+        if (byte >= 48 && byte <= 57) { return(byte - 48) }
+        if (byte >= 65 && byte <= 70) { return(byte - 55) }
+        if (byte >= 97 && byte <= 102) { return(byte - 87) }
+        return(-1)
     }
 
     bool identifier(String name) {
         int64 index = 0
         while (index < name.length) {
             int64 byte = int64(name.byteAt(index))
-            if (!((byte >= 65 && byte <= 90) || (byte >= 97 && byte <= 122) || byte == 95 || (index > 0 && byte >= 48 && byte <= 57))) { return false }
+            if (!((byte >= 65 && byte <= 90) || (byte >= 97 && byte <= 122) || byte == 95 || (index > 0 && byte >= 48 && byte <= 57))) { return(false) }
             index = index + 1
         }
-        return name.length > 0
+        return(name.length > 0)
     }
 
     int64 number(String text, int64 row, int64 col) {
@@ -37,7 +37,7 @@ class Literals {
             result = result * radix + value
             index = index + 1
         }
-        return sign * result
+        return(sign * result)
     }
 
     buffer quoted(String text, int64 row, int64 col) {
@@ -66,7 +66,7 @@ class Literals {
             index = index + 1
         }
         if (text.startsWith("'") && result.length != 1) { fail("character literal must decode to one byte", row, col) }
-        return result
+        return(result)
     }
 
     int64 scalar(AstNode node, int64 element, int64 row, int64 col) {
@@ -74,15 +74,15 @@ class Literals {
         if (!token.kind().equals("INTEGER")) { fail("expected literal operand", row, col) }
         int64 value = number(token.lexeme(), row, col)
         if ((element == 1 && (value < -2147483648 || value > 2147483647)) || (element == 2 && (value < 0 || value > 255))) { fail("literal out of range for type", row, col) }
-        return value
+        return(value)
     }
 
     int64 valueType(String name, bool allowVoid, int64 row, int64 col) {
-        if (name.equals("i32")) { return 1 }
-        if (name.equals("u8")) { return 2 }
-        if (name.equals("file")) { return 3 }
-        if (allowVoid && name.equals("void")) { return 0 }
+        if (name.equals("i32")) { return(1) }
+        if (name.equals("u8")) { return(2) }
+        if (name.equals("file")) { return(3) }
+        if (allowVoid && name.equals("void")) { return(0) }
         fail("invalid type", row, col)
-        return -1
+        return(-1)
     }
 }

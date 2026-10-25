@@ -54,9 +54,9 @@ class SourceLine {
     }
 
     int64 columnAt(int64 offset) {
-        if (offset < 0) { return 1 }
-        if (offset >= columns.length) { return columns[columns.length - 1] as int64 }
-        return columns[offset] as int64
+        if (offset < 0) { return(1) }
+        if (offset >= columns.length) { return(columns[columns.length - 1] as int64) }
+        return(columns[offset] as int64)
     }
 
     void locate(AstNode node) {
@@ -75,10 +75,10 @@ class SourceLine {
         int64 index = 0
         while (index < locations.length) {
             NodeLocation location = locations[index] as NodeLocation
-            if (location.node == node) { return location.column }
+            if (location.node == node) { return(location.column) }
             index = index + 1
         }
-        return 1
+        return(1)
     }
 
     buffer quoted(AstNode token, Literals literals) {
@@ -87,7 +87,7 @@ class SourceLine {
             NodeLocation location = locations[index] as NodeLocation
             if (location.node == token) {
                 try {
-                    return literals.quoted(token.lexeme(), row, location.offset + 1)
+                    return(literals.quoted(token.lexeme(), row, location.offset + 1))
                 } except(AssemblyError) as diagnostic {
                     AssemblyError located = diagnostic as AssemblyError
                     raise(AssemblyError(located.message, row, columnAt(located.column - 1)))
@@ -100,15 +100,15 @@ class SourceLine {
 
     int64 scalar(AstNode node, int64 element, Literals literals) {
         AstNode token = node.childAt(0)
-        if (!token.kind().equals("CHAR")) { return literals.scalar(node, element, row, column(node)) }
-        return int64(quoted(token, literals)[0])
+        if (!token.kind().equals("CHAR")) { return(literals.scalar(node, element, row, column(node))) }
+        return(int64(quoted(token, literals)[0]))
     }
 
     AstNode parse() {
         InputScanner scanner = InputScanner(text)
         if (!scanner.scan()) { raise(AssemblyError(scanner.problem, row, columnAt(scanner.errorOffset))) }
         tokens = scanner.tokens
-        if (tokens.length == 0) { return null }
+        if (tokens.length == 0) { return(null) }
         GeneratedParser parser = GeneratedParser(tokens)
         AstNode root = parser.parseAll()
         if (root == null) {
@@ -117,7 +117,7 @@ class SourceLine {
             raise(AssemblyError(parser.problem, row, columnAt(at)))
         }
         locate(root)
-        return root.childAt(0)
+        return(root.childAt(0))
     }
 }
 

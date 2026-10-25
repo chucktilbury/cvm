@@ -38,136 +38,136 @@ namespace CVM {
             RET_FILE = 0x22
         }
 
-        bool isValid(int64 opcode) { return opcode >= NOP && opcode <= RET_FILE }
+        bool isValid(int64 opcode) { return(opcode >= NOP && opcode <= RET_FILE) }
 
         int64 operandWidth(int64 opcode) {
-            if (opcode == CONST_I32 || opcode == JMP || opcode == JZ) { return 4 }
-            if (opcode == LDLOC || opcode == STLOC || opcode == LDGLOBAL || opcode == STGLOBAL || opcode == ARRAY || opcode == CALL) { return 2 }
-            if (opcode == CONST_U8 || opcode == SYS) { return 1 }
-            return 0
+            if (opcode == CONST_I32 || opcode == JMP || opcode == JZ) { return(4) }
+            if (opcode == LDLOC || opcode == STLOC || opcode == LDGLOBAL || opcode == STGLOBAL || opcode == ARRAY || opcode == CALL) { return(2) }
+            if (opcode == CONST_U8 || opcode == SYS) { return(1) }
+            return(0)
         }
 
         int64 operandKind(int64 opcode) {
-            if (opcode == CONST_I32) { return 1 }
-            if (opcode == CONST_U8 || opcode == SYS) { return 2 }
-            if (opcode == LDLOC || opcode == STLOC) { return 3 }
-            if (opcode == LDGLOBAL || opcode == STGLOBAL) { return 4 }
-            if (opcode == ARRAY) { return 5 }
-            if (opcode == JMP || opcode == JZ) { return 6 }
-            if (opcode == CALL) { return 7 }
-            return 0
+            if (opcode == CONST_I32) { return(1) }
+            if (opcode == CONST_U8 || opcode == SYS) { return(2) }
+            if (opcode == LDLOC || opcode == STLOC) { return(3) }
+            if (opcode == LDGLOBAL || opcode == STGLOBAL) { return(4) }
+            if (opcode == ARRAY) { return(5) }
+            if (opcode == JMP || opcode == JZ) { return(6) }
+            if (opcode == CALL) { return(7) }
+            return(0)
         }
 
         String mnemonic(int64 opcode) {
-            if (opcode == NOP) { return "nop" }
-            if (opcode == CONST_I32) { return "const.i32" }
-            if (opcode == CONST_U8) { return "const.u8" }
-            if (opcode == LDLOC) { return "ldloc" }
-            if (opcode == STLOC) { return "stloc" }
-            if (opcode == LDGLOBAL) { return "ldglobal" }
-            if (opcode == STGLOBAL) { return "stglobal" }
-            if (opcode == ARRAY) { return "array" }
-            if (opcode == ALEN) { return "alen" }
-            if (opcode == AGET) { return "aget" }
-            if (opcode == ASET) { return "aset" }
-            if (opcode == ADD_I32) { return "add.i32" }
-            if (opcode == SUB_I32) { return "sub.i32" }
-            if (opcode == MUL_I32) { return "mul.i32" }
-            if (opcode == DIV_I32) { return "div.i32" }
-            if (opcode == REM_I32) { return "rem.i32" }
-            if (opcode == NEG_I32) { return "neg.i32" }
-            if (opcode == EQ_I32) { return "eq.i32" }
-            if (opcode == NE_I32) { return "ne.i32" }
-            if (opcode == LT_I32) { return "lt.i32" }
-            if (opcode == LE_I32) { return "le.i32" }
-            if (opcode == GT_I32) { return "gt.i32" }
-            if (opcode == GE_I32) { return "ge.i32" }
-            if (opcode == TO_U8) { return "to.u8" }
-            if (opcode == TO_I32) { return "to.i32" }
-            if (opcode == DUP) { return "dup" }
-            if (opcode == POP) { return "pop" }
-            if (opcode == JMP) { return "jmp" }
-            if (opcode == JZ) { return "jz" }
-            if (opcode == CALL) { return "call" }
-            if (opcode == RET) { return "ret" }
-            if (opcode == RET_I32) { return "ret.i32" }
-            if (opcode == RET_U8) { return "ret.u8" }
-            if (opcode == SYS) { return "sys" }
-            if (opcode == RET_FILE) { return "ret.file" }
-            return ""
+            if (opcode == NOP) { return("nop") }
+            if (opcode == CONST_I32) { return("const.i32") }
+            if (opcode == CONST_U8) { return("const.u8") }
+            if (opcode == LDLOC) { return("ldloc") }
+            if (opcode == STLOC) { return("stloc") }
+            if (opcode == LDGLOBAL) { return("ldglobal") }
+            if (opcode == STGLOBAL) { return("stglobal") }
+            if (opcode == ARRAY) { return("array") }
+            if (opcode == ALEN) { return("alen") }
+            if (opcode == AGET) { return("aget") }
+            if (opcode == ASET) { return("aset") }
+            if (opcode == ADD_I32) { return("add.i32") }
+            if (opcode == SUB_I32) { return("sub.i32") }
+            if (opcode == MUL_I32) { return("mul.i32") }
+            if (opcode == DIV_I32) { return("div.i32") }
+            if (opcode == REM_I32) { return("rem.i32") }
+            if (opcode == NEG_I32) { return("neg.i32") }
+            if (opcode == EQ_I32) { return("eq.i32") }
+            if (opcode == NE_I32) { return("ne.i32") }
+            if (opcode == LT_I32) { return("lt.i32") }
+            if (opcode == LE_I32) { return("le.i32") }
+            if (opcode == GT_I32) { return("gt.i32") }
+            if (opcode == GE_I32) { return("ge.i32") }
+            if (opcode == TO_U8) { return("to.u8") }
+            if (opcode == TO_I32) { return("to.i32") }
+            if (opcode == DUP) { return("dup") }
+            if (opcode == POP) { return("pop") }
+            if (opcode == JMP) { return("jmp") }
+            if (opcode == JZ) { return("jz") }
+            if (opcode == CALL) { return("call") }
+            if (opcode == RET) { return("ret") }
+            if (opcode == RET_I32) { return("ret.i32") }
+            if (opcode == RET_U8) { return("ret.u8") }
+            if (opcode == SYS) { return("sys") }
+            if (opcode == RET_FILE) { return("ret.file") }
+            return("")
         }
 
         String operandSchema(int64 opcode) {
-            if (opcode == CONST_I32) { return "i32" }
-            if (opcode == CONST_U8) { return "u8 value" }
-            if (opcode == SYS) { return "u8 service number (0..12)" }
-            if (opcode == LDLOC || opcode == STLOC) { return "u16 local index" }
-            if (opcode == LDGLOBAL || opcode == STGLOBAL) { return "u16 global index" }
-            if (opcode == ARRAY) { return "u16 array index" }
-            if (opcode == JMP || opcode == JZ) { return "u32 function-relative target" }
-            if (opcode == CALL) { return "u16 function index" }
-            if (isValid(opcode)) { return "none" }
-            return ""
+            if (opcode == CONST_I32) { return("i32") }
+            if (opcode == CONST_U8) { return("u8 value") }
+            if (opcode == SYS) { return("u8 service number (0..12)") }
+            if (opcode == LDLOC || opcode == STLOC) { return("u16 local index") }
+            if (opcode == LDGLOBAL || opcode == STGLOBAL) { return("u16 global index") }
+            if (opcode == ARRAY) { return("u16 array index") }
+            if (opcode == JMP || opcode == JZ) { return("u32 function-relative target") }
+            if (opcode == CALL) { return("u16 function index") }
+            if (isValid(opcode)) { return("none") }
+            return("")
         }
 
         String stackEffect(int64 opcode) {
-            if (opcode == NOP) { return "S -> S" }
-            if (opcode == CONST_I32) { return "S -> S,i32" }
-            if (opcode == CONST_U8) { return "S -> S,u8" }
-            if (opcode == LDLOC || opcode == LDGLOBAL) { return "S -> S,T" }
-            if (opcode == STLOC || opcode == STGLOBAL) { return "S,T -> S,T" }
-            if (opcode == ARRAY) { return "S -> S,Array<T>" }
-            if (opcode == ALEN) { return "S,Array<T> -> S,i32" }
-            if (opcode == AGET) { return "S,Array<T>,i32 -> S,T" }
-            if (opcode == ASET) { return "S,Array<T>,i32,T -> S,T" }
-            if (opcode == ADD_I32 || opcode == SUB_I32 || opcode == MUL_I32 || opcode == DIV_I32 || opcode == REM_I32 || opcode == EQ_I32 || opcode == NE_I32 || opcode == LT_I32 || opcode == LE_I32 || opcode == GT_I32 || opcode == GE_I32) { return "S,i32,i32 -> S,i32" }
-            if (opcode == NEG_I32 || opcode == TO_U8 || opcode == TO_I32) { return "S,T -> S,T" }
-            if (opcode == DUP) { return "S,T -> S,T,T" }
-            if (opcode == POP) { return "S,T -> S" }
-            if (opcode == JMP) { return "S -> S" }
-            if (opcode == JZ) { return "S,i32 -> S" }
-            if (opcode == CALL) { return "signature-dependent" }
-            if (opcode == RET) { return "S -> return" }
-            if (opcode == RET_I32 || opcode == RET_U8 || opcode == RET_FILE) { return "S,T -> return" }
-            if (opcode == SYS) { return "service-dependent" }
-            return ""
+            if (opcode == NOP) { return("S -> S") }
+            if (opcode == CONST_I32) { return("S -> S,i32") }
+            if (opcode == CONST_U8) { return("S -> S,u8") }
+            if (opcode == LDLOC || opcode == LDGLOBAL) { return("S -> S,T") }
+            if (opcode == STLOC || opcode == STGLOBAL) { return("S,T -> S,T") }
+            if (opcode == ARRAY) { return("S -> S,Array<T>") }
+            if (opcode == ALEN) { return("S,Array<T> -> S,i32") }
+            if (opcode == AGET) { return("S,Array<T>,i32 -> S,T") }
+            if (opcode == ASET) { return("S,Array<T>,i32,T -> S,T") }
+            if (opcode == ADD_I32 || opcode == SUB_I32 || opcode == MUL_I32 || opcode == DIV_I32 || opcode == REM_I32 || opcode == EQ_I32 || opcode == NE_I32 || opcode == LT_I32 || opcode == LE_I32 || opcode == GT_I32 || opcode == GE_I32) { return("S,i32,i32 -> S,i32") }
+            if (opcode == NEG_I32 || opcode == TO_U8 || opcode == TO_I32) { return("S,T -> S,T") }
+            if (opcode == DUP) { return("S,T -> S,T,T") }
+            if (opcode == POP) { return("S,T -> S") }
+            if (opcode == JMP) { return("S -> S") }
+            if (opcode == JZ) { return("S,i32 -> S") }
+            if (opcode == CALL) { return("signature-dependent") }
+            if (opcode == RET) { return("S -> return") }
+            if (opcode == RET_I32 || opcode == RET_U8 || opcode == RET_FILE) { return("S,T -> return") }
+            if (opcode == SYS) { return("service-dependent") }
+            return("")
         }
 
         String operation(int64 opcode) {
-            if (opcode == NOP) { return "no effect" }
-            if (opcode == CONST_I32) { return "signed constant" }
-            if (opcode == CONST_U8) { return "unsigned constant" }
-            if (opcode == LDLOC || opcode == LDGLOBAL) { return "load typed value" }
-            if (opcode == STLOC || opcode == STGLOBAL) { return "store typed value and leave it" }
-            if (opcode == ARRAY) { return "reference a global or current-function array" }
-            if (opcode == ALEN) { return "array element count" }
-            if (opcode == AGET) { return "checked indexed load" }
-            if (opcode == ASET) { return "checked indexed store and leave value" }
-            if (opcode == ADD_I32) { return "checked left plus right" }
-            if (opcode == SUB_I32) { return "checked left minus right" }
-            if (opcode == MUL_I32) { return "checked multiply" }
-            if (opcode == DIV_I32) { return "checked signed divide" }
-            if (opcode == REM_I32) { return "checked signed remainder" }
-            if (opcode == NEG_I32) { return "checked negation" }
-            if (opcode == EQ_I32) { return "equal, result 0 or 1" }
-            if (opcode == NE_I32) { return "not equal, result 0 or 1" }
-            if (opcode == LT_I32) { return "signed less-than, result 0 or 1" }
-            if (opcode == LE_I32) { return "signed less-than-or-equal, result 0 or 1" }
-            if (opcode == GT_I32) { return "signed greater-than, result 0 or 1" }
-            if (opcode == GE_I32) { return "signed greater-than-or-equal, result 0 or 1" }
-            if (opcode == TO_U8) { return "checked conversion to 0..255" }
-            if (opcode == TO_I32) { return "zero-extend u8 to i32" }
-            if (opcode == DUP) { return "duplicate scalar or file value, not ArrayRef" }
-            if (opcode == POP) { return "discard scalar or file value" }
-            if (opcode == JMP) { return "branch to function-relative byte target" }
-            if (opcode == JZ) { return "pop i32 and branch if zero" }
-            if (opcode == CALL) { return "call indexed function" }
-            if (opcode == RET) { return "return void" }
-            if (opcode == RET_I32) { return "return i32" }
-            if (opcode == RET_U8) { return "return u8" }
-            if (opcode == SYS) { return "invoke synchronous host service" }
-            if (opcode == RET_FILE) { return "return file handle" }
-            return ""
+            if (opcode == NOP) { return("no effect") }
+            if (opcode == CONST_I32) { return("signed constant") }
+            if (opcode == CONST_U8) { return("unsigned constant") }
+            if (opcode == LDLOC || opcode == LDGLOBAL) { return("load typed value") }
+            if (opcode == STLOC || opcode == STGLOBAL) { return("store typed value and leave it") }
+            if (opcode == ARRAY) { return("reference a global or current-function array") }
+            if (opcode == ALEN) { return("array element count") }
+            if (opcode == AGET) { return("checked indexed load") }
+            if (opcode == ASET) { return("checked indexed store and leave value") }
+            if (opcode == ADD_I32) { return("checked left plus right") }
+            if (opcode == SUB_I32) { return("checked left minus right") }
+            if (opcode == MUL_I32) { return("checked multiply") }
+            if (opcode == DIV_I32) { return("checked signed divide") }
+            if (opcode == REM_I32) { return("checked signed remainder") }
+            if (opcode == NEG_I32) { return("checked negation") }
+            if (opcode == EQ_I32) { return("equal, result 0 or 1") }
+            if (opcode == NE_I32) { return("not equal, result 0 or 1") }
+            if (opcode == LT_I32) { return("signed less-than, result 0 or 1") }
+            if (opcode == LE_I32) { return("signed less-than-or-equal, result 0 or 1") }
+            if (opcode == GT_I32) { return("signed greater-than, result 0 or 1") }
+            if (opcode == GE_I32) { return("signed greater-than-or-equal, result 0 or 1") }
+            if (opcode == TO_U8) { return("checked conversion to 0..255") }
+            if (opcode == TO_I32) { return("zero-extend u8 to i32") }
+            if (opcode == DUP) { return("duplicate scalar or file value, not ArrayRef") }
+            if (opcode == POP) { return("discard scalar or file value") }
+            if (opcode == JMP) { return("branch to function-relative byte target") }
+            if (opcode == JZ) { return("pop i32 and branch if zero") }
+            if (opcode == CALL) { return("call indexed function") }
+            if (opcode == RET) { return("return void") }
+            if (opcode == RET_I32) { return("return i32") }
+            if (opcode == RET_U8) { return("return u8") }
+            if (opcode == SYS) { return("invoke synchronous host service") }
+            if (opcode == RET_FILE) { return("return file handle") }
+            return("")
         }
     }
 
@@ -182,38 +182,38 @@ namespace CVM {
         }
 
         String name(int64 id) {
-            if (id == STDOUT_I32) { return "stdout_i32" }
-            if (id == STDOUT_BYTE) { return "stdout_byte" }
-            if (id == STDOUT_WRITE) { return "stdout_write" }
-            if (id == STDIN_BYTE) { return "stdin_byte" }
-            if (id == FILE_OPEN_READ) { return "file_open_read" }
-            if (id == FILE_OPEN_WRITE) { return "file_open_write" }
-            if (id == FILE_READ) { return "file_read" }
-            if (id == FILE_WRITE) { return "file_write" }
-            if (id == FILE_CLOSE) { return "file_close" }
-            if (id == FILE_OPEN) { return "file_open" }
-            if (id == FILE_READ_HANDLE) { return "file_read_handle" }
-            if (id == FILE_WRITE_HANDLE) { return "file_write_handle" }
-            if (id == FILE_CLOSE_HANDLE) { return "file_close_handle" }
-            return ""
+            if (id == STDOUT_I32) { return("stdout_i32") }
+            if (id == STDOUT_BYTE) { return("stdout_byte") }
+            if (id == STDOUT_WRITE) { return("stdout_write") }
+            if (id == STDIN_BYTE) { return("stdin_byte") }
+            if (id == FILE_OPEN_READ) { return("file_open_read") }
+            if (id == FILE_OPEN_WRITE) { return("file_open_write") }
+            if (id == FILE_READ) { return("file_read") }
+            if (id == FILE_WRITE) { return("file_write") }
+            if (id == FILE_CLOSE) { return("file_close") }
+            if (id == FILE_OPEN) { return("file_open") }
+            if (id == FILE_READ_HANDLE) { return("file_read_handle") }
+            if (id == FILE_WRITE_HANDLE) { return("file_write_handle") }
+            if (id == FILE_CLOSE_HANDLE) { return("file_close_handle") }
+            return("")
         }
 
         int64 parameterCount(int64 id) {
-            if (id == STDOUT_WRITE) { return 3 }
-            if (id == FILE_OPEN) { return 2 }
-            if (id == FILE_READ_HANDLE || id == FILE_WRITE_HANDLE) { return 3 }
-            if (id == FILE_CLOSE_HANDLE) { return 1 }
-            if (id == FILE_READ || id == FILE_WRITE) { return 4 }
-            if (id == STDIN_BYTE) { return 0 }
-            if (id >= STDOUT_I32 && id <= FILE_CLOSE) { return 1 }
-            return -1
+            if (id == STDOUT_WRITE) { return(3) }
+            if (id == FILE_OPEN) { return(2) }
+            if (id == FILE_READ_HANDLE || id == FILE_WRITE_HANDLE) { return(3) }
+            if (id == FILE_CLOSE_HANDLE) { return(1) }
+            if (id == FILE_READ || id == FILE_WRITE) { return(4) }
+            if (id == STDIN_BYTE) { return(0) }
+            if (id >= STDOUT_I32 && id <= FILE_CLOSE) { return(1) }
+            return(-1)
         }
 
         int64 resultCount(int64 id) {
-            if (id < STDOUT_I32 || id > FILE_CLOSE_HANDLE) { return -1 }
+            if (id < STDOUT_I32 || id > FILE_CLOSE_HANDLE) { return(-1) }
             if (id == STDOUT_I32 || id == STDOUT_BYTE || id == FILE_CLOSE ||
-                id == FILE_CLOSE_HANDLE) { return 0 }
-            return 1
+                id == FILE_CLOSE_HANDLE) { return(0) }
+            return(1)
         }
     }
 
@@ -231,51 +231,51 @@ namespace CVM {
         }
 
         bool writeU8(int64 value) {
-            if (_error != OK) { return false }
+            if (_error != OK) { return(false) }
             if (value < 0 || value > 255) {
                 _error = RANGE_ERROR
-                return false
+                return(false)
             }
             _bytes.append(value)
-            return true
+            return(true)
         }
 
         bool writeU16(int64 value) {
-            if (_error != OK) { return false }
+            if (_error != OK) { return(false) }
             if (value < 0 || value > 65535) {
                 _error = RANGE_ERROR
-                return false
+                return(false)
             }
             _bytes.append(value % 256)
             _bytes.append((value / 256) % 256)
-            return true
+            return(true)
         }
 
         bool writeU32(uint64 value) {
-            if (_error != OK) { return false }
+            if (_error != OK) { return(false) }
             if (value > 4294967295u) {
                 _error = RANGE_ERROR
-                return false
+                return(false)
             }
             _bytes.append(value % 256u)
             _bytes.append((value / 256u) % 256u)
             _bytes.append((value / 65536u) % 256u)
             _bytes.append((value / 16777216u) % 256u)
-            return true
+            return(true)
         }
 
         bool writeI32(int64 value) {
-            if (_error != OK) { return false }
+            if (_error != OK) { return(false) }
             if (value < -2147483648 || value > 2147483647) {
                 _error = RANGE_ERROR
-                return false
+                return(false)
             }
-            if (value < 0) { return writeU32(uint64(value + 4294967296)) }
-            return writeU32(uint64(value))
+            if (value < 0) { return(writeU32(uint64(value + 4294967296))) }
+            return(writeU32(uint64(value)))
         }
 
-        int64 errorCode() { return _error }
-        buffer bytes() { return _bytes }
+        int64 errorCode() { return(_error) }
+        buffer bytes() { return(_bytes) }
     }
 
     class ByteReader {
@@ -300,57 +300,57 @@ namespace CVM {
             if (offset < 0 || offset > _bytes.length) {
                 _error = TRUNCATED
                 _errorOffset = _offset
-                return
+                return()
             }
             _offset = offset
         }
 
         int64 readU8() {
-            if (_error != OK) { return 0 }
+            if (_error != OK) { return(0) }
             if (_offset < 0 || _offset >= _bytes.length) {
                 _error = TRUNCATED
                 _errorOffset = _offset
-                return 0
+                return(0)
             }
             int64 value = int64(_bytes[_offset])
             _offset = _offset + 1
-            return value
+            return(value)
         }
 
         int64 readU16() {
-            if (_error != OK) { return 0 }
+            if (_error != OK) { return(0) }
             if (_offset < 0 || _bytes.length - _offset < 2) {
                 _error = TRUNCATED
                 _errorOffset = _offset
-                return 0
+                return(0)
             }
             int64 value = int64(_bytes[_offset]) + int64(_bytes[_offset + 1]) * 256
             _offset = _offset + 2
-            return value
+            return(value)
         }
 
         int64 readU32() {
-            if (_error != OK) { return 0 }
+            if (_error != OK) { return(0) }
             if (_offset < 0 || _bytes.length - _offset < 4) {
                 _error = TRUNCATED
                 _errorOffset = _offset
-                return 0
+                return(0)
             }
             int64 value = int64(_bytes[_offset]) + int64(_bytes[_offset + 1]) * 256 + int64(_bytes[_offset + 2]) * 65536 + int64(_bytes[_offset + 3]) * 16777216
             _offset = _offset + 4
-            return value
+            return(value)
         }
 
         int64 readI32() {
             int64 value = readU32()
-            if (_error != OK) { return 0 }
-            if (value >= 2147483648) { return value - 4294967296 }
-            return value
+            if (_error != OK) { return(0) }
+            if (value >= 2147483648) { return(value - 4294967296) }
+            return(value)
         }
 
-        int64 offset() { return _offset }
-        int64 errorCode() { return _error }
-        int64 errorOffset() { return _errorOffset }
+        int64 offset() { return(_offset) }
+        int64 errorCode() { return(_error) }
+        int64 errorOffset() { return(_errorOffset) }
     }
 
     class ValidationResult {
@@ -376,11 +376,11 @@ namespace CVM {
             _message = message
         }
 
-        bool valid() { return _code == OK }
-        int64 code() { return _code }
-        int64 section() { return _section }
-        int64 offset() { return _offset }
-        String message() { return _message }
+        bool valid() { return(_code == OK) }
+        int64 code() { return(_code) }
+        int64 section() { return(_section) }
+        int64 offset() { return(_offset) }
+        String message() { return(_message) }
     }
 
     class BuildResult {
@@ -396,10 +396,10 @@ namespace CVM {
             _message = message
         }
 
-        bool ok() { return _code == 0 }
-        buffer bytes() { return _bytes }
-        int64 code() { return _code }
-        String message() { return _message }
+        bool ok() { return(_code == 0) }
+        buffer bytes() { return(_bytes) }
+        int64 code() { return(_code) }
+        String message() { return(_message) }
     }
 
     class Section {
@@ -421,12 +421,12 @@ namespace CVM {
             _length = bytes.length
         }
 
-        int64 kind() { return _kind }
-        int64 flags() { return _flags }
-        int64 count() { return _count }
-        buffer bytes() { return _bytes }
-        int64 offset() { return _offset }
-        int64 length() { return _length }
+        int64 kind() { return(_kind) }
+        int64 flags() { return(_flags) }
+        int64 count() { return(_count) }
+        buffer bytes() { return(_bytes) }
+        int64 offset() { return(_offset) }
+        int64 length() { return(_length) }
         void setExtent(int64 offset, int64 length) {
             _offset = offset
             _length = length
@@ -444,8 +444,8 @@ namespace CVM {
             _target = target
         }
 
-        int64 functionOffset() { return _functionOffset }
-        int64 target() { return _target }
+        int64 functionOffset() { return(_functionOffset) }
+        int64 target() { return(_target) }
     }
 
     class InstructionBuilder {
@@ -460,7 +460,7 @@ namespace CVM {
                 _code.append(source[index])
                 index = index + 1
             }
-            return true
+            return(true)
         }
 
         bool fail(int64 code, String message) {
@@ -468,7 +468,7 @@ namespace CVM {
                 _error = code
                 _message = message
             }
-            return false
+            return(false)
         }
 
         public:
@@ -481,16 +481,16 @@ namespace CVM {
         }
 
         bool emit(int64 opcode, int64 operand) {
-            if (_error != 0) { return false }
+            if (_error != 0) { return(false) }
             Opcode schema = Opcode()
-            if (!schema.isValid(opcode)) { return fail(INVALID_INSTRUCTION, "unknown opcode") }
+            if (!schema.isValid(opcode)) { return(fail(INVALID_INSTRUCTION, "unknown opcode")) }
             int64 width = schema.operandWidth(opcode)
             int64 kind = schema.operandKind(opcode)
-            if (width == 0) { return fail(INVALID_INSTRUCTION, "opcode has no operand") }
-            if (kind == 1 && (operand < -2147483648 || operand > 2147483647)) { return fail(INVALID_VALUE, "i32 operand out of range") }
-            if (kind == 2 && (operand < 0 || operand > 255 || (opcode == Opcode.SYS && operand > Service.FILE_CLOSE_HANDLE))) { return fail(INVALID_VALUE, "u8 operand out of range") }
-            if ((kind == 3 || kind == 4 || kind == 5 || kind == 7) && (operand < 0 || operand > 65535)) { return fail(INVALID_VALUE, "u16 operand out of range") }
-            if (kind == 6 && (operand < 0 || operand > 4294967295)) { return fail(INVALID_VALUE, "branch target out of range") }
+            if (width == 0) { return(fail(INVALID_INSTRUCTION, "opcode has no operand")) }
+            if (kind == 1 && (operand < -2147483648 || operand > 2147483647)) { return(fail(INVALID_VALUE, "i32 operand out of range")) }
+            if (kind == 2 && (operand < 0 || operand > 255 || (opcode == Opcode.SYS && operand > Service.FILE_CLOSE_HANDLE))) { return(fail(INVALID_VALUE, "u8 operand out of range")) }
+            if ((kind == 3 || kind == 4 || kind == 5 || kind == 7) && (operand < 0 || operand > 65535)) { return(fail(INVALID_VALUE, "u16 operand out of range")) }
+            if (kind == 6 && (operand < 0 || operand > 4294967295)) { return(fail(INVALID_VALUE, "branch target out of range")) }
             _code.append(opcode)
             if (width == 1) {
                 _code.append(operand)
@@ -505,20 +505,20 @@ namespace CVM {
                     appendAll(writer.bytes())
                 }
             }
-            return true
+            return(true)
         }
 
         bool emitNoOperand(int64 opcode) {
-            if (_error != 0) { return false }
+            if (_error != 0) { return(false) }
             Opcode schema = Opcode()
-            if (!schema.isValid(opcode) || schema.operandWidth(opcode) != 0) { return fail(INVALID_INSTRUCTION, "invalid no-operand opcode") }
+            if (!schema.isValid(opcode) || schema.operandWidth(opcode) != 0) { return(fail(INVALID_INSTRUCTION, "invalid no-operand opcode")) }
             _code.append(opcode)
-            return true
+            return(true)
         }
 
-        buffer bytes() { return _code }
-        int64 errorCode() { return _error }
-        String errorMessage() { return _message }
+        buffer bytes() { return(_code) }
+        int64 errorCode() { return(_error) }
+        String errorMessage() { return(_message) }
     }
 
     class ContainerBuilder {
@@ -548,16 +548,16 @@ namespace CVM {
                 target.append(source[index])
                 index = index + 1
             }
-            return true
+            return(true)
         }
 
         int64 sectionCount(Section section) {
             int64 kind = section.kind()
-            if (kind == Format.CODE || kind == Format.TYPES || kind == Format.DATA || kind == Format.STRINGS) { return section.bytes().length }
-            if (kind == Format.FUNCS) { return _functions.length / Format.FUNCTION_SIZE }
-            if (kind == Format.GLOBALS) { return _globals.length / Format.GLOBAL_SIZE }
-            if (kind == Format.ARRAYS) { return _arrays.length / Format.ARRAY_SIZE }
-            return section.count()
+            if (kind == Format.CODE || kind == Format.TYPES || kind == Format.DATA || kind == Format.STRINGS) { return(section.bytes().length) }
+            if (kind == Format.FUNCS) { return(_functions.length / Format.FUNCTION_SIZE) }
+            if (kind == Format.GLOBALS) { return(_globals.length / Format.GLOBAL_SIZE) }
+            if (kind == Format.ARRAYS) { return(_arrays.length / Format.ARRAY_SIZE) }
+            return(section.count())
         }
 
         int64 appendString(String value) {
@@ -568,21 +568,21 @@ namespace CVM {
                 index = index + 1
             }
             _strings.append(0)
-            return offset
+            return(offset)
         }
 
         bool validIdentifier(String value) {
-            if (value == null || value.length == 0) { return false }
+            if (value == null || value.length == 0) { return(false) }
             int64 index = 0
             while (index < value.length) {
                 int64 current = int64(value.byteAt(index))
                 bool letter = (current >= 65 && current <= 90) || (current >= 97 && current <= 122) || current == 95
                 bool digit = current >= 48 && current <= 57
-                if (index == 0 && !letter) { return false }
-                if (index > 0 && !letter && !digit) { return false }
+                if (index == 0 && !letter) { return(false) }
+                if (index > 0 && !letter && !digit) { return(false) }
                 index = index + 1
             }
-            return true
+            return(true)
         }
 
         bool fail(int64 code, String message) {
@@ -590,17 +590,17 @@ namespace CVM {
                 _error = code
                 _message = message
             }
-            return false
+            return(false)
         }
 
         bool nameExists(list names, String value) {
             int64 index = 0
             while (index < names.length) {
                 String previous = names[index] as String
-                if (previous.equals(value)) { return true }
+                if (previous.equals(value)) { return(true) }
                 index = index + 1
             }
-            return false
+            return(false)
         }
 
         public:
@@ -635,21 +635,21 @@ namespace CVM {
         }
 
         bool setEntry(int64 functionIndex) {
-            if (_error != 0) { return false }
-            if (functionIndex < 0 || functionIndex > 65534) { return fail(INVALID_VALUE, "entry index is out of range") }
+            if (_error != 0) { return(false) }
+            if (functionIndex < 0 || functionIndex > 65534) { return(fail(INVALID_VALUE, "entry index is out of range")) }
             _entry = functionIndex
-            return true
+            return(true)
         }
 
         bool addFunction(String name, buffer code, buffer localTypes, int64 parameterCount, int64 localCount, int64 maximumStack, int64 returnType) {
-            if (_error != 0) { return false }
-            if (!validIdentifier(name) || code == null || localTypes == null || code.length == 0 || parameterCount < 0 || parameterCount > 65535 || localCount < 0 || localCount > 65535 || parameterCount + localCount > 65536 || localTypes.length != parameterCount + localCount || maximumStack < 0 || maximumStack > 65535 || returnType < 0 || returnType > 3) { return fail(INVALID_VALUE, "invalid function metadata") }
-            if (_functionNames.length >= 65535 || _code.length > 4294967295 - code.length || _types.length > 4294967295 - localTypes.length || _strings.length > 4294967295 - name.length - 1) { return fail(LIMIT_EXCEEDED, "function exceeds v1 limits") }
-            if (nameExists(_functionNames, name)) { return fail(INVALID_VALUE, "duplicate function name") }
+            if (_error != 0) { return(false) }
+            if (!validIdentifier(name) || code == null || localTypes == null || code.length == 0 || parameterCount < 0 || parameterCount > 65535 || localCount < 0 || localCount > 65535 || parameterCount + localCount > 65536 || localTypes.length != parameterCount + localCount || maximumStack < 0 || maximumStack > 65535 || returnType < 0 || returnType > 3) { return(fail(INVALID_VALUE, "invalid function metadata")) }
+            if (_functionNames.length >= 65535 || _code.length > 4294967295 - code.length || _types.length > 4294967295 - localTypes.length || _strings.length > 4294967295 - name.length - 1) { return(fail(LIMIT_EXCEEDED, "function exceeds v1 limits")) }
+            if (nameExists(_functionNames, name)) { return(fail(INVALID_VALUE, "duplicate function name")) }
             int64 index = 0
             while (index < localTypes.length) {
                 int64 valueType = int64(localTypes[index])
-                if (valueType < 1 || valueType > 3) { return fail(INVALID_VALUE, "invalid function parameter/local type") }
+                if (valueType < 1 || valueType > 3) { return(fail(INVALID_VALUE, "invalid function parameter/local type")) }
                 index = index + 1
             }
             int64 nameOffset = appendString(name)
@@ -670,12 +670,12 @@ namespace CVM {
             appendAll(_functions, record.bytes())
             appendAll(_types, localTypes)
             appendAll(_code, code)
-            return true
+            return(true)
         }
 
         bool addGlobal(String name, int64 valueType, int64 initialValue) {
-            if (_error != 0) { return false }
-            if (!validIdentifier(name) || nameExists(_globalNames, name) || (valueType != 1 && valueType != 2) || initialValue < -2147483648 || initialValue > 2147483647 || (valueType == 2 && (initialValue < 0 || initialValue > 255)) || _globals.length / Format.GLOBAL_SIZE >= 65536 || _strings.length > 4294967295 - name.length - 1) { return fail(INVALID_VALUE, "invalid global metadata") }
+            if (_error != 0) { return(false) }
+            if (!validIdentifier(name) || nameExists(_globalNames, name) || (valueType != 1 && valueType != 2) || initialValue < -2147483648 || initialValue > 2147483647 || (valueType == 2 && (initialValue < 0 || initialValue > 255)) || _globals.length / Format.GLOBAL_SIZE >= 65536 || _strings.length > 4294967295 - name.length - 1) { return(fail(INVALID_VALUE, "invalid global metadata")) }
             int64 nameOffset = appendString(name)
             _globalNames.append(name)
             ByteWriter record = ByteWriter()
@@ -686,15 +686,15 @@ namespace CVM {
             record.writeU8(0)
             record.writeI32(initialValue)
             appendAll(_globals, record.bytes())
-            return true
+            return(true)
         }
 
         bool addArray(String name, int64 ownerFunction, int64 elementType, int64 length, buffer initialData) {
-            if (_error != 0) { return false }
-            if (!validIdentifier(name) || nameExists(_arrayNames, name) || (ownerFunction != 65535 && (ownerFunction < 0 || ownerFunction >= _functionNames.length)) || (elementType != 1 && elementType != 2) || length <= 0 || length > 4294967295 || initialData == null || _arrays.length / Format.ARRAY_SIZE >= 65536 || _strings.length > 4294967295 - name.length - 1) { return fail(INVALID_VALUE, "invalid array metadata") }
+            if (_error != 0) { return(false) }
+            if (!validIdentifier(name) || nameExists(_arrayNames, name) || (ownerFunction != 65535 && (ownerFunction < 0 || ownerFunction >= _functionNames.length)) || (elementType != 1 && elementType != 2) || length <= 0 || length > 4294967295 || initialData == null || _arrays.length / Format.ARRAY_SIZE >= 65536 || _strings.length > 4294967295 - name.length - 1) { return(fail(INVALID_VALUE, "invalid array metadata")) }
             int64 width = 1
             if (elementType == 1) { width = 4 }
-            if (initialData.length != 0 && (initialData.length != length * width || _data.length > 4294967295 - initialData.length)) { return fail(INVALID_VALUE, "array initializer length is invalid") }
+            if (initialData.length != 0 && (initialData.length != length * width || _data.length > 4294967295 - initialData.length)) { return(fail(INVALID_VALUE, "array initializer length is invalid")) }
             int64 nameOffset = appendString(name)
             _arrayNames.append(name)
             int64 flags = 1
@@ -716,35 +716,35 @@ namespace CVM {
             }
             record.writeU32(0u)
             appendAll(_arrays, record.bytes())
-            return true
+            return(true)
         }
 
         bool setDebug(buffer records, int64 count) {
-            if (_error != 0) { return false }
-            if (_debugSet || records == null || count < 0 || count > 4294967295 / Format.DEBUG_SIZE || records.length != count * Format.DEBUG_SIZE) { return fail(INVALID_VALUE, "invalid DEBUG section") }
+            if (_error != 0) { return(false) }
+            if (_debugSet || records == null || count < 0 || count > 4294967295 / Format.DEBUG_SIZE || records.length != count * Format.DEBUG_SIZE) { return(fail(INVALID_VALUE, "invalid DEBUG section")) }
             _debug = records
             _debugCount = count
             _debugSet = true
-            return true
+            return(true)
         }
 
         bool addOptionalSection(int64 kind, buffer bytes, int64 count) {
-            if (_error != 0) { return false }
-            if ((kind >= Format.CODE && kind <= Format.DEBUG) || kind < 0 || kind > 65535 || bytes == null || count < 0 || count > 4294967295 || _optionalSections.length >= 65527) { return fail(INVALID_VALUE, "invalid optional section") }
+            if (_error != 0) { return(false) }
+            if ((kind >= Format.CODE && kind <= Format.DEBUG) || kind < 0 || kind > 65535 || bytes == null || count < 0 || count > 4294967295 || _optionalSections.length >= 65527) { return(fail(INVALID_VALUE, "invalid optional section")) }
             if (_optionalSections.length > 0) {
                 Section previous = _optionalSections[_optionalSections.length - 1] as Section
-                if (kind <= previous.kind()) { return fail(INVALID_VALUE, "optional sections must be added in ascending kind order") }
+                if (kind <= previous.kind()) { return(fail(INVALID_VALUE, "optional sections must be added in ascending kind order")) }
             }
             _optionalSections.append(Section(kind, 1, count, bytes))
-            return true
+            return(true)
         }
 
-        int64 errorCode() { return _error }
-        String errorMessage() { return _message }
+        int64 errorCode() { return(_error) }
+        String errorMessage() { return(_message) }
 
         BuildResult encode() {
-            if (_error != 0) { return BuildResult(buffer[], _error, _message) }
-            if (_functionNames.length == 0 || _entry >= _functionNames.length) { return BuildResult(buffer[], INVALID_VALUE, "entry function is missing") }
+            if (_error != 0) { return(BuildResult(buffer[], _error, _message)) }
+            if (_functionNames.length == 0 || _entry >= _functionNames.length) { return(BuildResult(buffer[], INVALID_VALUE, "entry function is missing")) }
             _sections = []
             int64 optionalIndex = 0
             while (optionalIndex < _optionalSections.length) {
@@ -765,14 +765,14 @@ namespace CVM {
                 _sections.append(_optionalSections[optionalIndex] as Section)
                 optionalIndex = optionalIndex + 1
             }
-            if (_sections.length > 65535) { return BuildResult(buffer[], LIMIT_EXCEEDED, "too many sections") }
+            if (_sections.length > 65535) { return(BuildResult(buffer[], LIMIT_EXCEEDED, "too many sections")) }
             int64 fileSize = Format.HEADER_SIZE + _sections.length * Format.DIRECTORY_ENTRY_SIZE
             list lengths = []
             int64 index = 0
             while (index < _sections.length) {
                 Section section = _sections[index] as Section
                 int64 size = section.bytes().length
-                if (size > 4294967295 - fileSize) { return BuildResult(buffer[], LIMIT_EXCEEDED, "container exceeds v1 size limit") }
+                if (size > 4294967295 - fileSize) { return(BuildResult(buffer[], LIMIT_EXCEEDED, "container exceeds v1 size limit")) }
                 lengths.append(size)
                 fileSize = fileSize + size
                 index = index + 1
@@ -811,10 +811,10 @@ namespace CVM {
                 appendAll(writer.bytes(), section.bytes())
                 index = index + 1
             }
-            if (writer.errorCode() != 0 || writer.bytes().length != fileSize) { return BuildResult(buffer[], LIMIT_EXCEEDED, "container encoding failed") }
+            if (writer.errorCode() != 0 || writer.bytes().length != fileSize) { return(BuildResult(buffer[], LIMIT_EXCEEDED, "container encoding failed")) }
             ValidationResult validation = ContainerValidator().validate(writer.bytes())
-            if (!validation.valid()) { return BuildResult(buffer[], validation.code(), validation.message()) }
-            return BuildResult(writer.bytes(), 0, "")
+            if (!validation.valid()) { return(BuildResult(buffer[], validation.code(), validation.message())) }
+            return(BuildResult(writer.bytes(), 0, ""))
         }
     }
 
@@ -824,50 +824,50 @@ namespace CVM {
             int64 index = 0
             while (index < sections.length) {
                 Section section = sections[index] as Section
-                if (section.kind() == kind) { return section }
+                if (section.kind() == kind) { return(section) }
                 index = index + 1
             }
-            return null
+            return(null)
         }
 
         ValidationResult reject(int64 code, int64 section, int64 offset, String message) {
-            return ValidationResult(code, section, offset, message)
+            return(ValidationResult(code, section, offset, message))
         }
 
         bool validName(buffer bytes, int64 stringsStart, int64 stringsLength, int64 offset) {
-            if (offset < 0 || offset >= stringsLength) { return false }
+            if (offset < 0 || offset >= stringsLength) { return(false) }
             int64 cursor = stringsStart + offset
             int64 end = stringsStart + stringsLength
             bool first = true
             while (cursor < end) {
                 int64 value = int64(bytes[cursor])
-                if (value == 0) { return !first }
+                if (value == 0) { return(!first) }
                 bool letter = (value >= 65 && value <= 90) || (value >= 97 && value <= 122) || value == 95
                 bool digit = value >= 48 && value <= 57
-                if (first && !letter) { return false }
-                if (!first && !letter && !digit) { return false }
+                if (first && !letter) { return(false) }
+                if (!first && !letter && !digit) { return(false) }
                 first = false
                 cursor = cursor + 1
             }
-            return false
+            return(false)
         }
 
         bool sameName(buffer bytes, int64 stringsStart, int64 first, int64 second) {
             int64 left = stringsStart + first
             int64 right = stringsStart + second
             while (int64(bytes[left]) == int64(bytes[right])) {
-                if (int64(bytes[left]) == 0) { return true }
+                if (int64(bytes[left]) == 0) { return(true) }
                 left = left + 1
                 right = right + 1
             }
-            return false
+            return(false)
         }
 
         public:
         ValidationResult validate(buffer bytes) {
-            if (bytes == null || bytes.length < Format.HEADER_SIZE) { return reject(ValidationResult.TRUNCATED, 0, 0, "truncated header") }
+            if (bytes == null || bytes.length < Format.HEADER_SIZE) { return(reject(ValidationResult.TRUNCATED, 0, 0, "truncated header")) }
             ByteReader reader = ByteReader(bytes)
-            if (reader.readU8() != 0x43 || reader.readU8() != 0x56 || reader.readU8() != 0x4d || reader.readU8() != 0) { return reject(ValidationResult.INVALID_MAGIC, 0, 0, "invalid CVM magic") }
+            if (reader.readU8() != 0x43 || reader.readU8() != 0x56 || reader.readU8() != 0x4d || reader.readU8() != 0) { return(reject(ValidationResult.INVALID_MAGIC, 0, 0, "invalid CVM magic")) }
             int64 major = reader.readU16()
             int64 minor = reader.readU16()
             int64 headerSize = reader.readU16()
@@ -878,10 +878,10 @@ namespace CVM {
             int64 directoryOffset = reader.readU32()
             int64 fileSize = reader.readU32()
             int64 reserved32 = reader.readU32()
-            if (major != Format.MAJOR_VERSION || minor != Format.MINOR_VERSION) { return reject(ValidationResult.UNSUPPORTED_VERSION, 0, 4, "unsupported bytecode version") }
-            if (headerSize != Format.HEADER_SIZE || headerFlags != 0 || reserved16 != 0 || reserved32 != 0 || directoryOffset != Format.HEADER_SIZE || sectionCount < 7) { return reject(ValidationResult.INVALID_HEADER, 0, 8, "invalid header fields") }
-            if (fileSize != bytes.length) { return reject(ValidationResult.INVALID_HEADER, 0, 24, "file size differs from input length") }
-            if (sectionCount > (bytes.length - Format.HEADER_SIZE) / Format.DIRECTORY_ENTRY_SIZE) { return reject(ValidationResult.TRUNCATED, 0, Format.HEADER_SIZE, "truncated section directory") }
+            if (major != Format.MAJOR_VERSION || minor != Format.MINOR_VERSION) { return(reject(ValidationResult.UNSUPPORTED_VERSION, 0, 4, "unsupported bytecode version")) }
+            if (headerSize != Format.HEADER_SIZE || headerFlags != 0 || reserved16 != 0 || reserved32 != 0 || directoryOffset != Format.HEADER_SIZE || sectionCount < 7) { return(reject(ValidationResult.INVALID_HEADER, 0, 8, "invalid header fields")) }
+            if (fileSize != bytes.length) { return(reject(ValidationResult.INVALID_HEADER, 0, 24, "file size differs from input length")) }
+            if (sectionCount > (bytes.length - Format.HEADER_SIZE) / Format.DIRECTORY_ENTRY_SIZE) { return(reject(ValidationResult.TRUNCATED, 0, Format.HEADER_SIZE, "truncated section directory")) }
             list sections = []
             int64 expectedOffset = Format.HEADER_SIZE + sectionCount * Format.DIRECTORY_ENTRY_SIZE
             int64 previousKind = -1
@@ -894,20 +894,20 @@ namespace CVM {
                 int64 offset = reader.readU32()
                 int64 length = reader.readU32()
                 int64 count = reader.readU32()
-                if (kind <= previousKind) { return reject(ValidationResult.INVALID_DIRECTORY, kind, at, "section kinds must be unique and ascending") }
-                if (offset != expectedOffset || offset > fileSize || length > fileSize - offset) { return reject(ValidationResult.INVALID_SECTION, kind, at + 4, "section extent is invalid") }
-                if (kind >= Format.CODE && kind <= Format.STRINGS && flags != 0) { return reject(ValidationResult.INVALID_SECTION, kind, at + 2, "required section flags must be zero") }
-                if (kind == Format.DEBUG && flags != 1) { return reject(ValidationResult.INVALID_SECTION, kind, at + 2, "DEBUG must be optional") }
-                if ((kind < Format.CODE || kind > Format.DEBUG) && flags != 1) { return reject(ValidationResult.INVALID_SECTION, kind, at + 2, "unknown required section") }
+                if (kind <= previousKind) { return(reject(ValidationResult.INVALID_DIRECTORY, kind, at, "section kinds must be unique and ascending")) }
+                if (offset != expectedOffset || offset > fileSize || length > fileSize - offset) { return(reject(ValidationResult.INVALID_SECTION, kind, at + 4, "section extent is invalid")) }
+                if (kind >= Format.CODE && kind <= Format.STRINGS && flags != 0) { return(reject(ValidationResult.INVALID_SECTION, kind, at + 2, "required section flags must be zero")) }
+                if (kind == Format.DEBUG && flags != 1) { return(reject(ValidationResult.INVALID_SECTION, kind, at + 2, "DEBUG must be optional")) }
+                if ((kind < Format.CODE || kind > Format.DEBUG) && flags != 1) { return(reject(ValidationResult.INVALID_SECTION, kind, at + 2, "unknown required section")) }
                 int64 recordSize = 0
                 if (kind == Format.FUNCS) { recordSize = Format.FUNCTION_SIZE }
                 if (kind == Format.GLOBALS) { recordSize = Format.GLOBAL_SIZE }
                 if (kind == Format.ARRAYS) { recordSize = Format.ARRAY_SIZE }
                 if (kind == Format.DEBUG) { recordSize = Format.DEBUG_SIZE }
                 if (recordSize == 0) {
-                    if (kind >= Format.CODE && kind <= Format.STRINGS && count != length) { return reject(ValidationResult.INVALID_SECTION, kind, at + 12, "byte count differs from section length") }
+                    if (kind >= Format.CODE && kind <= Format.STRINGS && count != length) { return(reject(ValidationResult.INVALID_SECTION, kind, at + 12, "byte count differs from section length")) }
                 } else {
-                    if (count > 4294967295 / recordSize || count * recordSize != length) { return reject(ValidationResult.INVALID_SECTION, kind, at + 8, "record count differs from section length") }
+                    if (count > 4294967295 / recordSize || count * recordSize != length) { return(reject(ValidationResult.INVALID_SECTION, kind, at + 8, "record count differs from section length")) }
                 }
                 sections.append(Section(kind, flags, count, buffer[]))
                 Section current = sections[sections.length - 1] as Section
@@ -916,10 +916,10 @@ namespace CVM {
                 previousKind = kind
                 index = index + 1
             }
-            if (expectedOffset != fileSize) { return reject(ValidationResult.INVALID_SECTION, 0, expectedOffset, "last section does not end at file size") }
+            if (expectedOffset != fileSize) { return(reject(ValidationResult.INVALID_SECTION, 0, expectedOffset, "last section does not end at file size")) }
             index = 1
             while (index <= 7) {
-                if (findSection(sections, index) == null) { return reject(ValidationResult.INVALID_DIRECTORY, index, Format.HEADER_SIZE, "required section is missing") }
+                if (findSection(sections, index) == null) { return(reject(ValidationResult.INVALID_DIRECTORY, index, Format.HEADER_SIZE, "required section is missing")) }
                 index = index + 1
             }
             Section code = findSection(sections, Format.CODE)
@@ -928,8 +928,8 @@ namespace CVM {
             Section globals = findSection(sections, Format.GLOBALS)
             Section arrays = findSection(sections, Format.ARRAYS)
             Section strings = findSection(sections, Format.STRINGS)
-            if (functions.count() > 65535 || globals.count() > 65536 || arrays.count() > 65536) { return reject(ValidationResult.INVALID_SECTION, 0, Format.HEADER_SIZE, "table exceeds v1 index limits") }
-            if (functions.count() == 0 || entry >= functions.count()) { return reject(ValidationResult.INVALID_INDEX, Format.FUNCS, 16, "entry function index is invalid") }
+            if (functions.count() > 65535 || globals.count() > 65536 || arrays.count() > 65536) { return(reject(ValidationResult.INVALID_SECTION, 0, Format.HEADER_SIZE, "table exceeds v1 index limits")) }
+            if (functions.count() == 0 || entry >= functions.count()) { return(reject(ValidationResult.INVALID_INDEX, Format.FUNCS, 16, "entry function index is invalid")) }
             buffer boundaries = buffer(code.length())
             list branches = []
             list functionNames = []
@@ -951,20 +951,20 @@ namespace CVM {
                 int64 r1 = reader.readU8()
                 int64 r2 = reader.readU8()
                 int64 slots = parameterCount + localCount
-                if (codeLength == 0 || codeOffset != nextCode || codeOffset > code.length() || codeLength > code.length() - codeOffset) { return reject(ValidationResult.INVALID_RECORD, Format.FUNCS, at + 4, "function code extent is invalid") }
-                if (slots > 65536 || typeOffset > types.length() || slots > types.length() - typeOffset || returnType > 3 || functionFlags != 0 || r0 != 0 || r1 != 0 || r2 != 0) { return reject(ValidationResult.INVALID_RECORD, Format.FUNCS, at + 12, "function metadata is invalid") }
-                if (!validName(bytes, strings.offset(), strings.length(), nameOffset)) { return reject(ValidationResult.INVALID_RECORD, Format.FUNCS, at, "function name is not a valid ASCII identifier") }
+                if (codeLength == 0 || codeOffset != nextCode || codeOffset > code.length() || codeLength > code.length() - codeOffset) { return(reject(ValidationResult.INVALID_RECORD, Format.FUNCS, at + 4, "function code extent is invalid")) }
+                if (slots > 65536 || typeOffset > types.length() || slots > types.length() - typeOffset || returnType > 3 || functionFlags != 0 || r0 != 0 || r1 != 0 || r2 != 0) { return(reject(ValidationResult.INVALID_RECORD, Format.FUNCS, at + 12, "function metadata is invalid")) }
+                if (!validName(bytes, strings.offset(), strings.length(), nameOffset)) { return(reject(ValidationResult.INVALID_RECORD, Format.FUNCS, at, "function name is not a valid ASCII identifier")) }
                 int64 nameIndex = 0
                 while (nameIndex < functionNames.length) {
                     int64 previousName = functionNames[nameIndex] as int64
-                    if (sameName(bytes, strings.offset(), previousName, nameOffset)) { return reject(ValidationResult.INVALID_RECORD, Format.FUNCS, at, "function name is duplicated") }
+                    if (sameName(bytes, strings.offset(), previousName, nameOffset)) { return(reject(ValidationResult.INVALID_RECORD, Format.FUNCS, at, "function name is duplicated")) }
                     nameIndex = nameIndex + 1
                 }
                 functionNames.append(nameOffset)
                 int64 typeIndex = 0
                 while (typeIndex < slots) {
                     int64 valueType = int64(bytes[types.offset() + typeOffset + typeIndex])
-                    if (valueType < 1 || valueType > 3) { return reject(ValidationResult.INVALID_RECORD, Format.TYPES, typeOffset + typeIndex, "invalid function parameter/local type") }
+                    if (valueType < 1 || valueType > 3) { return(reject(ValidationResult.INVALID_RECORD, Format.TYPES, typeOffset + typeIndex, "invalid function parameter/local type")) }
                     typeIndex = typeIndex + 1
                 }
                 int64 cursor = 0
@@ -974,18 +974,18 @@ namespace CVM {
                     reader.seek(instructionAt)
                     int64 opcode = reader.readU8()
                     Opcode schema = Opcode()
-                    if (!schema.isValid(opcode)) { return reject(ValidationResult.INVALID_INSTRUCTION, Format.CODE, instructionAt, "unknown opcode") }
+                    if (!schema.isValid(opcode)) { return(reject(ValidationResult.INVALID_INSTRUCTION, Format.CODE, instructionAt, "unknown opcode")) }
                     int64 width = schema.operandWidth(opcode)
-                    if (width > codeLength - cursor - 1) { return reject(ValidationResult.TRUNCATED, Format.CODE, instructionAt, "truncated instruction operand") }
+                    if (width > codeLength - cursor - 1) { return(reject(ValidationResult.TRUNCATED, Format.CODE, instructionAt, "truncated instruction operand")) }
                     int64 kind = schema.operandKind(opcode)
                     int64 operand = 0
                     if (width == 1) { operand = reader.readU8() }
                     if (width == 2) { operand = reader.readU16() }
                     if (width == 4) { operand = reader.readU32() }
-                    if (kind == 2 && opcode == Opcode.SYS && operand > Service.FILE_CLOSE_HANDLE) { return reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "unknown service number") }
-                    if ((kind == 3 && operand >= slots) || (kind == 4 && operand >= globals.count()) || (kind == 5 && operand >= arrays.count()) || (kind == 7 && operand >= functions.count())) { return reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "instruction index is invalid") }
+                    if (kind == 2 && opcode == Opcode.SYS && operand > Service.FILE_CLOSE_HANDLE) { return(reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "unknown service number")) }
+                    if ((kind == 3 && operand >= slots) || (kind == 4 && operand >= globals.count()) || (kind == 5 && operand >= arrays.count()) || (kind == 7 && operand >= functions.count())) { return(reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "instruction index is invalid")) }
                     if (kind == 6) {
-                        if (operand >= codeLength) { return reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "branch target outside function") }
+                        if (operand >= codeLength) { return(reject(ValidationResult.INVALID_INDEX, Format.CODE, instructionAt + 1, "branch target outside function")) }
                         branches.append(BranchTarget(codeOffset, operand))
                     }
                     cursor = cursor + 1 + width
@@ -993,14 +993,14 @@ namespace CVM {
                 nextCode = codeOffset + codeLength
                 index = index + 1
             }
-            if (nextCode != code.length()) { return reject(ValidationResult.INVALID_RECORD, Format.FUNCS, functions.offset(), "function code does not cover CODE") }
+            if (nextCode != code.length()) { return(reject(ValidationResult.INVALID_RECORD, Format.FUNCS, functions.offset(), "function code does not cover CODE")) }
             index = 0
             while (index < branches.length) {
                 BranchTarget branch = branches[index] as BranchTarget
-                if (int64(boundaries[branch.functionOffset() + branch.target()]) == 0) { return reject(ValidationResult.INVALID_INDEX, Format.CODE, code.offset() + branch.functionOffset() + branch.target(), "branch target is not an instruction boundary") }
+                if (int64(boundaries[branch.functionOffset() + branch.target()]) == 0) { return(reject(ValidationResult.INVALID_INDEX, Format.CODE, code.offset() + branch.functionOffset() + branch.target(), "branch target is not an instruction boundary")) }
                 index = index + 1
             }
-            return ValidationResult(ValidationResult.OK, 0, -1, "")
+            return(ValidationResult(ValidationResult.OK, 0, -1, ""))
         }
     }
 
@@ -1010,7 +1010,7 @@ namespace CVM {
         ValidationResult _validation
 
         int64 directoryValue(int64 kind, int64 field) {
-            if (!valid()) { return -1 }
+            if (!valid()) { return(-1) }
             int64 index = 0
             ByteReader reader = ByteReader(_bytes)
             while (index < directoryCount()) {
@@ -1022,13 +1022,13 @@ namespace CVM {
                 int64 sectionLength = reader.readU32()
                 int64 count = reader.readU32()
                 if (currentKind == kind) {
-                    if (field == 0) { return sectionOffset }
-                    if (field == 1) { return sectionLength }
-                    return count
+                    if (field == 0) { return(sectionOffset) }
+                    if (field == 1) { return(sectionLength) }
+                    return(count)
                 }
                 index = index + 1
             }
-            return -1
+            return(-1)
         }
 
         public:
@@ -1037,29 +1037,29 @@ namespace CVM {
             _validation = validation
         }
 
-        bool valid() { return _validation.valid() }
-        ValidationResult validation() { return _validation }
+        bool valid() { return(_validation.valid()) }
+        ValidationResult validation() { return(_validation) }
         int64 entryFunction() {
-            if (!valid()) { return -1 }
+            if (!valid()) { return(-1) }
             ByteReader reader = ByteReader(_bytes)
             reader.seek(16)
-            return reader.readU32()
+            return(reader.readU32())
         }
 
         int64 directoryCount() {
-            if (!valid()) { return 0 }
+            if (!valid()) { return(0) }
             ByteReader reader = ByteReader(_bytes)
             reader.seek(12)
-            return reader.readU16()
+            return(reader.readU16())
         }
 
-        int64 countForSection(int64 kind) { return directoryValue(kind, 2) }
+        int64 countForSection(int64 kind) { return(directoryValue(kind, 2)) }
 
         buffer sectionBytes(int64 kind) {
             int64 offset = directoryValue(kind, 0)
             int64 length = directoryValue(kind, 1)
-            if (offset < 0 || length < 0) { return null }
-            return _bytes[offset:offset + length]
+            if (offset < 0 || length < 0) { return(null) }
+            return(_bytes[offset:offset + length])
         }
     }
 
@@ -1067,7 +1067,7 @@ namespace CVM {
         public:
         ContainerDecodeResult decode(buffer bytes) {
             ValidationResult validation = ContainerValidator().validate(bytes)
-            return ContainerDecodeResult(bytes, validation)
+            return(ContainerDecodeResult(bytes, validation))
         }
     }
 }

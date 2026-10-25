@@ -22,25 +22,25 @@ namespace CVMFile {
             _error = error
             _category = category
         }
-        bool ok() { return _error.equals("") }
-        buffer bytes() { return _bytes }
-        String error() { return _error }
-        int64 category() { return _category }
+        bool ok() { return(_error.equals("")) }
+        buffer bytes() { return(_bytes) }
+        String error() { return(_error) }
+        int64 category() { return(_category) }
     }
 
     class Files {
         public:
         Result read(String path) {
-            return readLimited(path, 9223372036854775807)
+            return(readLimited(path, 9223372036854775807))
         }
 
         Result readLimited(String path, int64 maximumBytes) {
-            if (maximumBytes < 0) { return Result(buffer[], "maximum read size cannot be negative") }
+            if (maximumBytes < 0) { return(Result(buffer[], "maximum read size cannot be negative")) }
             Sys.File file = null
             try {
                 file = Sys.File(path, "rb")
             } except(Exception) as error {
-                return Result(buffer[], error.message)
+                return(Result(buffer[], error.message))
             }
             buffer bytes = buffer[]
             String failure = ""
@@ -76,18 +76,18 @@ namespace CVMFile {
             if (!failure.equals("")) {
                 int64 category = Result.IO_ERROR
                 if (limitExceeded) { category = Result.LIMIT_EXCEEDED }
-                return Result(buffer[], format("read '{}': {}", path, failure), category)
+                return(Result(buffer[], format("read '{}': {}", path, failure), category))
             }
-            return Result(bytes, "", Result.OK)
+            return(Result(bytes, "", Result.OK))
         }
 
         Result write(String path, buffer bytes) {
-            if (bytes == null) { return Result(buffer[], "write requires a byte buffer") }
+            if (bytes == null) { return(Result(buffer[], "write requires a byte buffer")) }
             Sys.File file = null
             try {
                 file = Sys.File(path, "wb")
             } except(Exception) as error {
-                return Result(buffer[], error.message)
+                return(Result(buffer[], error.message))
             }
             String failure = ""
             try {
@@ -107,8 +107,8 @@ namespace CVMFile {
                 String closeError = Sys.System().lastError()
                 if (failure.equals("") && !closeError.equals("")) { failure = closeError }
             }
-            if (!failure.equals("")) { return Result(buffer[], format("write '{}': {}", path, failure)) }
-            return Result(buffer[], "")
+            if (!failure.equals("")) { return(Result(buffer[], format("write '{}': {}", path, failure))) }
+            return(Result(buffer[], ""))
         }
     }
 }

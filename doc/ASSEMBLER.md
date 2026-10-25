@@ -25,6 +25,9 @@ There is no handwritten-parser fallback, vendored generator, runtime generator
 dependency, or runtime source-tree dependency. CMake tracks the grammar,
 generator executable, CWhip sources, modules and selected SDK resources.
 Changing any of these rebuilds the affected output.
+Use an updated cparsegen that emits current CWhip keyword syntax and explicit
+`int64` indices; generated source is no longer rewritten by CVM.
+See [Building](BUILDING.md) for the SDK and generator prerequisites.
 
 ## Source contract
 
