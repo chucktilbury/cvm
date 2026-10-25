@@ -1,11 +1,15 @@
 # Project shell
 
-Run `scripts/setup [debug|release|profile]` from any working directory to
+Run `scripts/setup [--clean] [debug|release|profile]` from any working directory to
 configure this project and start its interactive Bash shell. The script
 locates the project relative to itself, so it does not depend on the caller's
 current directory. An explicit argument selects the build type; without one,
 the SDK's registered default or the existing CMake cache wins. If neither
 provides a configuration, CMake's default (empty) build type is retained.
+The optional `--clean` flag runs `scripts/clean` before configuration, removing
+the default `build/`, `bin/`, `lib/`, `doc/out/`, and `share/` outputs.
+It can appear before or after the build type. Duplicate flags, multiple build
+types, and unknown arguments fail without cleaning or configuring.
 
 SDK selection follows `CWHIP_SDK` (non-empty) > the dedicated SDK file's
 top-level `sdk_prefix` > normal CMake discovery. SDK configuration lives at
@@ -44,6 +48,9 @@ Convenience commands operate on the project repository:
 
 | Command | Action |
 | --- | --- |
+| `build [TARGET...]` | Build all or selected CMake targets with 12 parallel jobs |
+| `rebuild [TARGET...]` | Clean first, then build all or selected targets |
+| `clean` | Remove all default generated output directories using the retained cleanup script |
 | `status [args...]` | Run `git status` |
 | `add [pathspec...]` | Stage the supplied pathspecs, or `.` when omitted |
 | `commit [args...]` | Run `git commit` |
@@ -53,3 +60,11 @@ Convenience commands operate on the project repository:
 
 These commands do not run automatically. In particular, entering the shell
 does not stage, commit, or push changes.
+
+`build` and `rebuild` are Bash functions that return CMake's exit status
+without replacing the shell. They use the project's `build/` directory even
+after changing directories; `_PROJECT_BUILD_DIR` can override that location.
+`clean` removes the current build directory too: exit the shell and run
+`scripts/setup` again afterward. For a full clean reconfiguration, exit and
+run `scripts/setup --clean [debug|release|profile]` instead. Custom output
+directories outside the default paths must be cleaned separately.
