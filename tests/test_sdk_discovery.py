@@ -31,11 +31,18 @@ class SdkDiscoveryTests(unittest.TestCase):
         self.env = os.environ.copy()
         for name in (
             "CWHIP_SDK", "CMAKE_PREFIX_PATH", "Cwhip_DIR", "Cwhip_ROOT",
-            "_PROJECT_NAME", "XDG_CONFIG_HOME", "CMAKE_INSTALL_PREFIX",
-            "CMAKE_BUILD_TYPE",
+            "_PROJECT_NAME", "_PROJECT_LOC", "_PROJECT_BUILD_DIR", "_BUILD_TYPE",
+            "CWHIP_BUILD_TYPE", "XDG_CONFIG_HOME", "CMAKE_INSTALL_PREFIX",
+            "CMAKE_BUILD_TYPE", "BASH_ENV", "ENV",
         ):
             self.env.pop(name, None)
         self.env["HOME"] = str(self.home)
+        for name in ("XDG_DATA_HOME", "XDG_CACHE_HOME", "XDG_STATE_HOME", "TMPDIR"):
+            directory = self.root / name.lower()
+            directory.mkdir()
+            self.env[name] = str(directory)
+        self.env.pop("XDG_RUNTIME_DIR", None)
+        self.env["CWHIP_REGISTER_SDK"] = "OFF"
         self.fallback = self.make_sdk("fallback")
         self.env["CMAKE_PREFIX_PATH"] = str(self.fallback)
         self.shell_record = self.root / "shell-sdk.txt"
@@ -44,6 +51,7 @@ class SdkDiscoveryTests(unittest.TestCase):
         shell = tools / "bash"
         shell.write_text(
             '#!/bin/sh\n'
+            'if [ "${1-}" != "--rcfile" ]; then exec /bin/bash "$@"; fi\n'
             'printf "%s" "${CWHIP_SDK-}" > "$SHELL_RECORD"\n'
             'printf "%s|%s" "${_BUILD_TYPE-}" "${CWHIP_BUILD_TYPE-}" '
             '> "$SHELL_BUILD_TYPE_RECORD"\n'
@@ -135,7 +143,9 @@ class SdkDiscoveryTests(unittest.TestCase):
     def select_sdk(self, prefix):
         self.write_sdk_config(f"sdk_prefix = {json.dumps(str(prefix))}\n")
 
-    def run_configure(self, setup=False, success=True, extra=(), shell_input=None):
+    def run_configure(
+        self, setup=False, success=True, extra=(), shell_input=None, expected_status=None
+    ):
         if setup:
             command = ["/bin/bash", str(self.project / "scripts/setup"), *extra]
         else:
@@ -147,6 +157,8 @@ class SdkDiscoveryTests(unittest.TestCase):
             input=shell_input, timeout=60,
         )
         output = result.stdout + result.stderr
+        if expected_status is not None:
+            self.assertEqual(result.returncode, expected_status, output)
         if success:
             self.assertEqual(result.returncode, 0, output)
         else:
@@ -154,6 +166,104 @@ class SdkDiscoveryTests(unittest.TestCase):
             if setup:
                 self.assertFalse(self.shell_record.exists(), output)
         return output
+
+    def test_setup_clean_removes_all_default_outputs_before_configuring(self):
+        for extra, expected in (
+            (("--clean",), "default|"),
+            (("--clean", "debug"), "debug|Debug"),
+            (("release", "--clean"), "release|Release"),
+            (("--clean", "profile"), "profile|RelWithDebInfo"),
+        ):
+            with self.subTest(extra=extra):
+                for name in ("build", "bin", "lib", "doc/out", "share"):
+                    output = self.project / name / "stale-output"
+                    output.parent.mkdir(parents=True, exist_ok=True)
+                    output.write_text("generated\n")
+                self.run_configure(setup=True, extra=extra)
+                for name in ("build", "bin", "lib", "doc/out", "share"):
+                    self.assertFalse((self.project / name / "stale-output").exists())
+                self.assert_selected(self.fallback)
+                self.assertEqual((self.root / "shell-build-type.txt").read_text(), expected)
+                self.assertTrue((self.project / "src/main.cw").is_file())
+
+    def test_setup_without_clean_preserves_outputs(self):
+        self.build.mkdir()
+        marker = self.build / "keep"
+        marker.write_text("generated\n")
+        self.run_configure(setup=True)
+        self.assertTrue(marker.exists())
+
+    def test_setup_invalid_arguments_do_not_clean_or_configure(self):
+        self.build.mkdir()
+        marker = self.build / "keep"
+        marker.write_text("generated\n")
+        for extra in (
+            ("--clean", "--clean"), ("debug", "release"), ("--unknown",),
+            ("--clean", "invalid"), ("--clean", "debug", "profile"),
+        ):
+            with self.subTest(extra=extra):
+                output = self.run_configure(
+                    setup=True, success=False, extra=extra, expected_status=2,
+                )
+                self.assertIn("[--clean] [debug|release|profile]", output)
+                self.assertTrue(marker.exists())
+                self.assertFalse((self.build / "CMakeCache.txt").exists())
+
+    def test_setup_active_shell_guard_precedes_cleanup_and_argument_parsing(self):
+        self.build.mkdir()
+        marker = self.build / "keep"
+        marker.touch()
+        self.env["_PROJECT_NAME"] = "caller"
+        output = self.run_configure(
+            setup=True, success=False, extra=("--clean", "--invalid"),
+            expected_status=1,
+        )
+        self.assertIn("already active (caller)", output)
+        self.assertTrue(marker.exists())
+        self.assertFalse((self.build / "CMakeCache.txt").exists())
+
+    def test_setup_clean_failure_does_not_configure_or_start_shell(self):
+        (self.project / "scripts/clean").write_text("#!/bin/sh\nexit 23\n")
+        self.run_configure(
+            setup=True, success=False, extra=("--clean",), expected_status=23,
+        )
+        self.assertFalse((self.build / "CMakeCache.txt").exists())
+
+    def test_setup_functions_forward_arguments_and_preserve_shell_and_status(self):
+        (self.root / "tools/bash").unlink()
+        output = self.run_configure(
+            setup=True,
+            shell_input=r'''
+type -t build
+type -t rebuild
+cmake() {
+    printf '%s\n' "$@" >> "$SHELL_RECORD"
+    return 17
+}
+cd /
+build
+printf 'build-status=%s\n' "$?"
+build 'target with spaces' hello
+printf 'target-status=%s\n' "$?"
+_PROJECT_BUILD_DIR="$_PROJECT_LOC/custom build"
+rebuild
+printf 'rebuild-status=%s\n' "$?"
+rebuild 'target with spaces' hello
+printf 'rebuild-target-status=%s\n' "$?"
+exit 0
+''',
+        )
+        self.assertEqual(output.count("function\n"), 2, output)
+        for name in ("build", "target", "rebuild", "rebuild-target"):
+            self.assertIn(f"{name}-status=17", output)
+        default = ["--build", str(self.build), "--parallel", "12"]
+        custom = ["--build", str(self.project / "custom build"), "--parallel", "12",
+                  "--clean-first"]
+        targets = ["--target", "target with spaces", "hello"]
+        self.assertEqual(
+            self.shell_record.read_text().splitlines(),
+            default + default + targets + custom + custom + targets,
+        )
 
     def assert_selected(self, prefix):
         self.assertEqual((self.build / "selected-sdk.txt").read_text(), str(prefix))

@@ -37,12 +37,12 @@ implementation uses parenthesized return expressions; it contains no callable
 types, dictionary literals, or mixed bitwise/comparison expressions requiring
 additional migration.
 
-Use a fresh build directory after updating the SDK or cparsegen so package
+Run `scripts/setup --clean` after updating the SDK or cparsegen so package
 locks and generated parser sources are recreated for the selected tools.
 
 ## Select an SDK
 
-Direct `cmake -S . -B build` and `scripts/setup` select the SDK in this exact
+`scripts/setup` (and direct CMake configuration) selects the SDK in this exact
 order:
 
 1. An explicit, non-empty `CWHIP_SDK` environment variable.
@@ -129,7 +129,8 @@ The template never edits user settings or copies the SDK into the project.
 
 ## Configure and build
 
-The setup script configures the `build/` directory and launches an interactive
+`scripts/setup [--clean] [debug|release|profile]` configures the `build/`
+directory and launches an interactive
 project shell there. An explicit build type overrides the SDK and cache; when
 omitted, CVM leaves `CMAKE_BUILD_TYPE` unset on the CMake command line so the
 SDK helper or existing build cache can provide it:
@@ -143,10 +144,18 @@ SDK helper or existing build cache can provide it:
 Build and run the example from the project shell:
 
 ```sh
-cmake --build .
+scripts/setup --clean release
+# In the project shell (build/):
+build
 ../bin/hello
 ../bin/cvm-as ../tests/fixtures/minimal.asm -o minimal.cvm
+rebuild hello
 ```
+
+Omit `--clean` to preserve the existing build cache and outputs. The flag may
+also follow the build type. `build [TARGET...]` and `rebuild [TARGET...]` are
+Bash functions; the latter cleans before building without reconfiguring.
+Both return CMake's status and leave the project shell running.
 
 The Cwhip application helper writes generated sources and package metadata
 inside the build tree. The compiled application is written directly to
@@ -158,13 +167,17 @@ creates an output directory only when a target needs it.
 The cache variables `CWHIP_BIN_DIR` and `CWHIP_LIB_DIR` choose output
 locations. They default to the project-root `bin/` and `lib/`; native runtime
 targets use the former, and native library/archive targets use the latter.
-For example:
+For custom cache variables, direct CMake configuration is needed because
+setup accepts only the clean flag and build type. Configure once, then enter
+the normal project shell:
 
 ```sh
 cmake -S . -B build \
   -DCWHIP_BIN_DIR="$PWD/out/bin" \
   -DCWHIP_LIB_DIR="$PWD/out/lib"
-cmake --build build
+scripts/setup
+# In the project shell:
+build
 ```
 
 The starter Cwhip executable follows `CWHIP_BIN_DIR`. Generated output
@@ -173,7 +186,8 @@ directories are ignored by Git.
 The assembler follows the same output variable. Its explicit compile rule
 isolates HOME/XDG settings and selects the installed SDK resources plus
 the CVM-owned package root, without copying CVM packages into the SDK.
-For a noninteractive configure/build/install:
+For automation without an interactive shell, use CMake directly (setup opens
+an interactive Bash shell and does not accept arbitrary CMake options):
 
 ```sh
 export CWHIP_SDK=/path/to/binary-io-sdk
@@ -191,13 +205,20 @@ source tree at runtime.
 
 ## Clean
 
-Use CMake's normal clean target to remove generated build artifacts:
+From the project shell, use the retained cleanup script to remove the default
+`build/`, `bin/`, `lib/`, `doc/out/`, and `share/` directories:
 
 ```sh
-cmake --build build --target clean
+clean
+exit
+scripts/setup release
 ```
 
-Rebuilding recreates the required output directories.
+For a full clean reconfiguration in one step, exit any project shell and run
+`scripts/setup --clean [debug|release|profile]`. To clean build artifacts while
+retaining the CMake cache, use `build clean`; `rebuild` cleans and builds again.
+Custom output paths are not removed by the cleanup script and must be cleaned
+separately.
 
 ## Test template discovery
 
@@ -209,7 +230,9 @@ python3 -m unittest discover -s tests -p test_sdk_discovery.py -v
 ```
 
 The discovery suite uses temporary mock SDK packages, a mock build-time
-generator and isolated home directories.
+generator and isolated home directories. It also covers cleanup ordering,
+argument validation, the active-shell guard, and build/rebuild function
+argument forwarding and failure statuses.
 It exercises real CMake configuration, setup's shell handoff, and the shell's
 SDK search path without requiring an installed CWhip compiler or user input.
 The filename filter excludes the installed-consumer suites, which require

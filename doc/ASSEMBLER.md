@@ -7,16 +7,20 @@ It does not execute programs.
 
 ```sh
 export CWHIP_SDK=/path/to/installed/binary-io-sdk
-cmake -S . -B build \
-  -DCPARSEGEN_EXECUTABLE=/path/to/installed/bin/cparsegen \
-  -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
-bin/cvm-as tests/fixtures/hello.asm -o build/hello.cvm
-cmake --install build --prefix "$PWD/build/install"
+export PATH="/path/to/installed/bin:$PATH" # cparsegen
+scripts/setup --clean release
+# In the project shell (build/):
+build
+ctest --output-on-failure
+../bin/cvm-as ../tests/fixtures/hello.asm -o hello.cvm
+cmake --install . --prefix "$PWD/install"
 cd /tmp
 /path/to/cvm/build/install/bin/cvm-as /path/to/input.asm -o output.cvm
 ```
+
+Installation uses CMake directly because the project shell has no install
+wrapper. See [Building](BUILDING.md) for noninteractive automation and custom
+CMake options.
 
 The build invokes exactly `cparsegen --library grammar/assembly.cpg
 BUILD/assembler/parser.cw`, using absolute paths. Generated source is confined

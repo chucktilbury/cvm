@@ -29,6 +29,11 @@ shared-library boundary and APIs are documented in
 See [Assembler usage and contract](doc/ASSEMBLER.md). The template
 `src/main.cw` hello-world remains as a build-shell example.
 
+With a current CWhip SDK selected and `cparsegen` on `PATH`, run
+`scripts/setup [--clean] [debug|release|profile]` to configure and enter the
+project shell. Then use `build`, `rebuild`, or `clean`; `--clean` removes
+the previous generated outputs before configuring.
+
 See [Building](doc/BUILDING.md) for prerequisites, SDK selection and output-directory
 customization, and [Project shell](doc/PROJECT-SHELL.md) for the shell
 environment and available commands. See the [changelog](doc/CHANGELOG.md) for
