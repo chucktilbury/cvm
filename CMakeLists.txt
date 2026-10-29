@@ -141,11 +141,18 @@ foreach(sdk_directory IN ITEMS "${Cwhip_MODULE_DIR}" "${Cwhip_BUILTIN_DIR}" "${C
         list(APPEND assembler_sdk_inputs ${sdk_inputs})
     endif()
 endforeach()
+if(NOT Python3_EXECUTABLE)
+    find_program(Python3_EXECUTABLE NAMES python3 REQUIRED)
+endif()
 add_custom_command(OUTPUT "${assembler_work}/parser.cw"
     COMMAND "${CMAKE_COMMAND}" -E rm -f "${assembler_work}/parser.cw"
     COMMAND "${CPARSEGEN_EXECUTABLE}" --library
         "${PROJECT_SOURCE_DIR}/grammar/assembly.cpg" "${assembler_work}/parser.cw"
+    COMMAND "${Python3_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/scripts/rewrite_generated_scanner.py"
+        "${assembler_work}/parser.cw"
     DEPENDS "${PROJECT_SOURCE_DIR}/grammar/assembly.cpg" "${CPARSEGEN_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/scripts/rewrite_generated_scanner.py"
     VERBATIM)
 add_custom_command(OUTPUT "${assembler_binary}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CWHIP_BIN_DIR}"
@@ -205,6 +212,8 @@ if(BUILD_TESTING)
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_cvm_library.py")
     set_tests_properties(cvm_installed_library PROPERTIES
         ENVIRONMENT "CWHIP_SDK=${Cwhip_PREFIX};CVM_BUILD_DIR=${PROJECT_BINARY_DIR}")
+    add_test(NAME cvm_generated_scanner
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_generated_scanner.py")
     add_test(NAME cvm_assembler
         COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_assembler.py")
     set_tests_properties(cvm_assembler PROPERTIES
