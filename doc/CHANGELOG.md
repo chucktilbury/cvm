@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Read container and assembly bytes with `text[index]`. Half-open spans use an
+  inclusive range, and empty spans stay empty. Rebuild cparsegen from the same
+  SDK before building the assembler: the generated scanner no longer calls
+  `String.slice` or `String.byteAt`.
 - Parenthesize return expressions throughout the assembler, runner and
   `cvm`, `cvmfile`, and `cvmrun` packages.
 - Compile the current cparsegen output directly instead of rewriting its

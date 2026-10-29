@@ -30,8 +30,8 @@ class SourceLine {
             int64 byte = int64(input[index])
             if (byte >= 128 && quote != 0 && !escaped && !comment) {
                 text.append("\\x")
-                text.append(hex.slice(byte / 16, byte / 16 + 1))
-                text.append(hex.slice(byte % 16, byte % 16 + 1))
+                text.append(byteSpan(hex, byte / 16, byte / 16 + 1))
+                text.append(byteSpan(hex, byte % 16, byte % 16 + 1))
                 int64 part = 0
                 while (part < 4) { columns.append(index + 1)
                     part = part + 1 }
@@ -118,6 +118,20 @@ class SourceLine {
         }
         locate(root)
         return(root.childAt(0))
+    }
+
+    int64 byteSpanBound(int64 value, int64 length) {
+        int64 index = value
+        if (index < 0) { index = index + length }
+        if (index < 0) { return(0) }
+        if (index > length) { return(length) }
+        return(index)
+    }
+    String byteSpan(String text, int64 first, int64 last) {
+        int64 lower = byteSpanBound(first, text.length)
+        int64 end = byteSpanBound(last, text.length)
+        if (end <= lower) { return("") }
+        return(text[lower..(end - 1)])
     }
 }
 

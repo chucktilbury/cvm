@@ -9,6 +9,7 @@ the public binary `File.readBytes`, `readAllBytes`, and `writeBytes` APIs.
 The numeric ABI and public C header are checked during configuration, and
 configuration also checks the binary file API signatures. Use a current SDK
 with parenthesized keyword arguments (`return(value)` and `raise(error)`),
+string indexing (`text[index]`, with no `String.byteAt` or `String.slice`),
 postfix callable types (`int64<int64>`), and bracket dictionary literals
 (`[key: value]`, `[:]`). An older numeric-v2 SDK is not necessarily
 source-compatible. No SDK is built, downloaded or overwritten by CVM.

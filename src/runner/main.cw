@@ -8,7 +8,7 @@ class RunnerCLI {
         int64 value = 0
         int64 index = 0
         while (index < text.length) {
-            int64 byte = int64(text.byteAt(index))
+            int64 byte = int64(text[index])
             if (byte < 48 || byte > 57) { return(-1) }
             int64 digit = byte - 48
             if (value > (maximum - digit) / 10) { return(-1) }
