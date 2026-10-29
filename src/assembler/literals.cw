@@ -11,7 +11,7 @@ class Literals {
     bool identifier(String name) {
         int64 index = 0
         while (index < name.length) {
-            int64 byte = int64(name.byteAt(index))
+            int64 byte = int64(name[index])
             if (!((byte >= 65 && byte <= 90) || (byte >= 97 && byte <= 122) || byte == 95 || (index > 0 && byte >= 48 && byte <= 57))) { return(false) }
             index = index + 1
         }
@@ -25,14 +25,14 @@ class Literals {
             index = 1 }
         else { if (text.startsWith("+")) { index = 1 } }
         int64 radix = 10
-        if (text.slice(index, text.length).startsWith("0x")) {
+        if (byteSpan(text, index, text.length).startsWith("0x")) {
             radix = 16
             index = index + 2
         }
         int64 result = 0
         if (index == text.length) { fail("expected integer", row, col) }
         while (index < text.length) {
-            int64 value = digit(int64(text.byteAt(index)))
+            int64 value = digit(int64(text[index]))
             if (value < 0 || value >= radix || result > (4294967295 - value) / radix) { fail("integer out of range", row, col) }
             result = result * radix + value
             index = index + 1
@@ -44,10 +44,10 @@ class Literals {
         buffer result = buffer[]
         int64 index = 1
         while (index < text.length - 1) {
-            int64 byte = int64(text.byteAt(index))
+            int64 byte = int64(text[index])
             if (byte == 92) {
                 index = index + 1
-                int64 escape = int64(text.byteAt(index))
+                int64 escape = int64(text[index])
                 if (escape == 110) { byte = 10 }
                 else { if (escape == 114) { byte = 13 }
                 else { if (escape == 116) { byte = 9 }
@@ -55,8 +55,8 @@ class Literals {
                 else { if (escape == 92 || escape == 34 || escape == 39) { byte = escape }
                 else { if (escape == 120) {
                     if (index + 2 >= text.length - 1) { fail("expected exactly two hexadecimal escape digits", row, col + index) }
-                    int64 first = digit(int64(text.byteAt(index + 1)))
-                    int64 second = digit(int64(text.byteAt(index + 2)))
+                    int64 first = digit(int64(text[index + 1]))
+                    int64 second = digit(int64(text[index + 2]))
                     if (first < 0 || second < 0) { fail("invalid hexadecimal escape", row, col + index) }
                     byte = first * 16 + second
                     index = index + 2
@@ -84,5 +84,19 @@ class Literals {
         if (allowVoid && name.equals("void")) { return(0) }
         fail("invalid type", row, col)
         return(-1)
+    }
+
+    int64 byteSpanBound(int64 value, int64 length) {
+        int64 index = value
+        if (index < 0) { index = index + length }
+        if (index < 0) { return(0) }
+        if (index > length) { return(length) }
+        return(index)
+    }
+    String byteSpan(String text, int64 first, int64 last) {
+        int64 lower = byteSpanBound(first, text.length)
+        int64 end = byteSpanBound(last, text.length)
+        if (end <= lower) { return("") }
+        return(text[lower..(end - 1)])
     }
 }

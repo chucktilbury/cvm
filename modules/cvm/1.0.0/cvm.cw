@@ -564,7 +564,7 @@ namespace CVM {
             int64 offset = _strings.length
             int64 index = 0
             while (index < value.length) {
-                _strings.append(value.byteAt(index))
+                _strings.append(value[index])
                 index = index + 1
             }
             _strings.append(0)
@@ -575,7 +575,7 @@ namespace CVM {
             if (value == null || value.length == 0) { return(false) }
             int64 index = 0
             while (index < value.length) {
-                int64 current = int64(value.byteAt(index))
+                int64 current = int64(value[index])
                 bool letter = (current >= 65 && current <= 90) || (current >= 97 && current <= 122) || current == 95
                 bool digit = current >= 48 && current <= 57
                 if (index == 0 && !letter) { return(false) }
