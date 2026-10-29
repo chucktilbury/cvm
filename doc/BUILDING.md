@@ -28,9 +28,11 @@ Put its executable on `PATH` or pass
 CWhip from the CVM-owned `grammar/assembly.cpg` in `build/assembler/`.
 No cparsegen source checkout is required or used by CVM, and the installed
 assembler needs neither the generator nor its grammar at runtime.
-The generated source is compiled as emitted; CVM does not rewrite legacy
-types or keyword syntax. Upgrade cparsegen as well as the SDK when migrating
-an older installation.
+The build then rewrites `String.slice` and `String.byteAt` in that generated
+scanner, so an older cparsegen still compiles against the current SDK. A
+cparsegen that already emits indexing is left unchanged. Upgrade cparsegen
+with the SDK when its other syntax, such as explicit `int64` indices, is
+older than this source.
 
 CVM's assembly language is independent of CWhip syntax: assembly semicolon
 comments and brace-delimited array initializers remain unchanged. The CWhip
