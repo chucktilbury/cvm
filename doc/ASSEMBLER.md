@@ -36,8 +36,10 @@ See [Building](BUILDING.md) for the SDK and generator prerequisites.
 
 ## Source contract
 
-The CLI accepts `cvm-as INPUT.asm -o OUTPUT.cvm` and `--help`. Exit status
-is 0 on success, 1 for assembly or file failures, and 2 for usage errors.
+The CLI accepts `cvm-as INPUT.asm -o OUTPUT.cvm` and `--help`. Argv is parsed
+through the SDK `cli` package; `--help` and usage failures print the fixed
+`usage: cvm-as INPUT.asm -o OUTPUT.cvm` line (not stdlib `helpText()`). Exit
+status is 0 on success, 1 for assembly or file failures, and 2 for usage errors.
 Diagnostics use `input:line:column: message`; columns count UTF-8 **bytes**,
 starting at 1. File errors are reported separately as `input: I/O: message`
 and include the failing path. Assembly and validation finish before opening
@@ -63,7 +65,7 @@ function's local array are rejected.
 No grammar extension is needed. Their metadata supplies stack arities;
 runtime checks enforce their types, modes and bounds. See the
 [integer-file example](INTERPRETER.md#integer-file-reproduction-and-smallc-lowering)
-and [canonical service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-io-boundary).
+and [canonical service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-i-o-boundary).
 
 Blank lines, CRLF/LF, a final line without LF, and semicolon comments are
 accepted. A semicolon is not an instruction separator. Identifiers are
