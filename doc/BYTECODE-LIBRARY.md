@@ -18,7 +18,7 @@ headers, native shims, or build-time dependency on the CVM source tree.
   retain their original ABI; `FILE_OPEN` (9), `FILE_READ_HANDLE` (10),
   `FILE_WRITE_HANDLE` (11), and `FILE_CLOSE_HANDLE` (12) add integer file
   descriptors with exact signatures in the
-  [service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-io-boundary).
+  [service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-i-o-boundary).
 - `CVM.ByteReader` reads u8/u16/u32/i32 values in little-endian order from a
   CWhip `buffer`. Reads past the input set `TRUNCATED` and preserve the first
   failing byte offset. `seek`, `offset`, `errorCode`, and `errorOffset`
@@ -84,7 +84,7 @@ assembler output and preserve all 256 byte values through files.
 ## Specification golden
 
 The 32-byte header in section 2.3 of
-[the specification](BYTECODE-ASSEMBLY.md#23-numeric-golden-example) encodes
+[the specification](BYTECODE-ASSEMBLY.md#2-3-numeric-golden-example) encodes
 `07 00` at header offsets 12-13, matching the normative minimum section count
 and the seven directory entries in the 183-byte minimal container. The
 conformance test checks this exact header and verifies the complete container
