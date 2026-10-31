@@ -4,6 +4,7 @@ include "literals.cw"
 include "source.cw"
 include "stack.cw"
 import cvmfile as IO
+import cli as Cli
 
 class Assembler {
     list functions
@@ -290,22 +291,55 @@ class Assembler {
 }
 
 class AssemblerCLI {
+    String usage() {
+        return("usage: cvm-as INPUT.asm -o OUTPUT.cvm")
+    }
+
+    Cli.CommandLine parser() {
+        Cli.CommandLine commandLine = Cli.CommandLine("cvm-as", "assemble CVM bytecode", "1.0.0")
+        Cli.Option help = Cli.Option()
+        help.longName = "help"
+        help.name = "help"
+        help.action = Cli.Action().HELP
+        commandLine.addOption(help)
+        Cli.Option output = Cli.Option()
+        output.shortName = "o"
+        output.name = "output"
+        output.description = "output container path"
+        output.valueType = Cli.ValueType().STRING
+        output.required = true
+        commandLine.addOption(output)
+        Cli.Positional input = Cli.Positional()
+        input.name = "input"
+        input.description = "assembly source"
+        input.required = true
+        commandLine.addPositional(input)
+        return(commandLine)
+    }
+
     int64 run() {
-        Sys.Process process = Sys.Process()
-        if (process.argc() == 2 && process.arg(1).equals("--help")) {
-            Sys.StandardIO().writeLine("usage: cvm-as INPUT.asm -o OUTPUT.cvm")
-            return(0)
-        }
-        if (process.argc() != 4 || !process.arg(2).equals("-o")) {
-            Sys.StandardIO().writeErrorLine("usage: cvm-as INPUT.asm -o OUTPUT.cvm")
+        Cli.CommandLine commandLine = parser()
+        try {
+            commandLine.parseArgv()
+        } except() as error {
+            Sys.StandardIO().writeErrorLine(usage())
             return(2)
         }
-        String input = process.arg(1)
+        if (commandLine.currentAction() == Cli.Action().HELP) {
+            Sys.StandardIO().writeLine(usage())
+            return(0)
+        }
+        if (commandLine.wasProvided("output") == false or commandLine.allPositionalValues().length != 1) {
+            Sys.StandardIO().writeErrorLine(usage())
+            return(2)
+        }
+        String input = commandLine.allPositionalValues()[0] as String
+        String output = commandLine.value("output")
         try {
             IO.Result source = IO.Files().read(input)
             if (!source.ok()) { raise(Exception(source.error())) }
             buffer bytes = Assembler().encode(source.bytes())
-            IO.Result saved = IO.Files().write(process.arg(3), bytes)
+            IO.Result saved = IO.Files().write(output, bytes)
             if (!saved.ok()) { raise(Exception(saved.error())) }
         } except(AssemblyError) as diagnostic {
             AssemblyError located = diagnostic as AssemblyError
