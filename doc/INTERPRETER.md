@@ -22,10 +22,10 @@ the function-relative instruction byte offset. Validation diagnostics include
 the validator's section and byte offset. The public API preserves these
 categories and fields in `CVMRun.ExecutionResult`.
 
-An unrecognized argument is treated as the input path, not rejected as an
-unknown option. For example, `cvm-run --not-an-option` attempts to load a file
-with that name and exits 1 if it cannot be opened; an additional input argument
-is a usage error and exits 2.
+Argv is parsed through the SDK `cli` package. Unknown options and other usage
+errors print `usage: cvm-run ...` on stderr and exit 2 (including
+`cvm-run --not-an-option`). `--help` prints the same usage line on stdout and
+exits 0. A missing or unreadable input path after a successful parse exits 1.
 
 ## Execution scope
 
@@ -51,7 +51,7 @@ performed even after structural validation because the validator does not
 verify stack types, call signatures, all record contents, or reachability.
 
 Services follow the exact signatures and behavior in
-[the bytecode specification](BYTECODE-ASSEMBLY.md#6-runtime-services-and-io-boundary).
+[the bytecode specification](BYTECODE-ASSEMBLY.md#6-runtime-services-and-i-o-boundary).
 Console output is byte-exact, including NUL and high bytes; `stdin_byte`
 returns one byte at a time or `-1` at EOF. Files are opened in binary mode.
 Reads return short counts and zero at EOF; writes return actual positive
@@ -62,7 +62,7 @@ instance; open handles are closed after normal return and after runtime or
 service failure. Cleanup errors do not replace a primary failure.
 
 Services 9..12 add integer descriptors without changing opaque `file`
-services 4..8. See the [canonical service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-io-boundary)
+services 4..8. See the [canonical service table](BYTECODE-ASSEMBLY.md#6-runtime-services-and-i-o-boundary)
 for exact signatures, zero-length semantics and descriptor scope.
 `file_open` accepts only NUL-terminated `r`, `w`, or `a` and always uses binary
 I/O. `a` creates a missing file or preserves existing bytes and appends.
