@@ -1,6 +1,7 @@
 import cvmfile as IO
 import cvmrun as VM
 import system as Sys
+import cli as Cli
 
 class RunnerCLI {
     int64 parseLimit(String text, int64 maximum, bool allowZero) {
@@ -27,87 +28,105 @@ class RunnerCLI {
         Sys.StandardIO().writeErrorLine(usage())
     }
 
-    int64 run() {
-        Sys.Process process = Sys.Process()
-        if (process.argc() == 2 && process.arg(1).equals("--help")) {
-            Sys.StandardIO().writeLine(usage())
-            return(0)
-        }
+    Cli.Option numberOption(String longName, String name, String description) {
+        Cli.Option option = Cli.Option()
+        option.longName = longName
+        option.name = name
+        option.description = description
+        option.valueType = Cli.ValueType().STRING
+        return(option)
+    }
 
-        VM.Limits defaults = VM.Limits()
-        int64 programBytes = defaults.programBytes()
-        int64 instructions = defaults.instructions()
-        int64 stackValues = defaults.stackValues()
-        int64 callDepth = defaults.callDepth()
-        int64 heapBytes = defaults.heapBytes()
-        VM.Capabilities defaultCapabilities = VM.Capabilities()
-        bool stdinEnabled = defaultCapabilities.stdinEnabled()
-        bool stdoutEnabled = defaultCapabilities.stdoutEnabled()
-        bool filesEnabled = defaultCapabilities.filesEnabled()
-        int64 maxOpenFiles = defaultCapabilities.maxOpenFiles()
-        String input = ""
-        int64 index = 1
-        while (index < process.argc()) {
-            String argument = process.arg(index)
-            if (argument.equals("--no-stdin")) {
-                stdinEnabled = false
-                index = index + 1
-            } else {
-                if (argument.equals("--no-stdout")) {
-                    stdoutEnabled = false
-                    index = index + 1
-                } else {
-                    if (argument.equals("--no-files")) {
-                        filesEnabled = false
-                        index = index + 1
-                    } else {
-                        if (argument.equals("--max-program-bytes") || argument.equals("--max-instructions") || argument.equals("--max-stack-values") || argument.equals("--max-call-depth") || argument.equals("--max-heap-bytes") || argument.equals("--max-open-files")) {
-                            if (index + 1 >= process.argc()) {
-                                usageError()
-                                return(2)
-                            }
-                            int64 maximum = VM.Limits.MAX_PROGRAM_BYTES
-                            bool allowZero = false
-                            if (argument.equals("--max-program-bytes")) { maximum = VM.Limits.MAX_PROGRAM_BYTES }
-                            if (argument.equals("--max-instructions")) { maximum = VM.Limits.MAX_INSTRUCTIONS }
-                            if (argument.equals("--max-stack-values")) { maximum = VM.Limits.MAX_STACK_VALUES }
-                            if (argument.equals("--max-call-depth")) { maximum = VM.Limits.MAX_CALL_DEPTH }
-                            if (argument.equals("--max-heap-bytes")) {
-                                maximum = VM.Limits.MAX_HEAP_BYTES
-                                allowZero = true
-                            }
-                            if (argument.equals("--max-open-files")) {
-                                maximum = VM.Capabilities.MAX_OPEN_FILES
-                                allowZero = true
-                            }
-                            int64 value = parseLimit(process.arg(index + 1), maximum, allowZero)
-                            if (value < 0) {
-                                usageError()
-                                return(2)
-                            }
-                            if (argument.equals("--max-program-bytes")) { programBytes = value }
-                            if (argument.equals("--max-instructions")) { instructions = value }
-                            if (argument.equals("--max-stack-values")) { stackValues = value }
-                            if (argument.equals("--max-call-depth")) { callDepth = value }
-                            if (argument.equals("--max-heap-bytes")) { heapBytes = value }
-                            if (argument.equals("--max-open-files")) { maxOpenFiles = value }
-                            index = index + 2
-                        } else {
-                            if (!input.equals("")) {
-                                usageError()
-                                return(2)
-                            }
-                            input = argument
-                            index = index + 1
-                        }
-                    }
-                }
-            }
+    Cli.CommandLine parser() {
+        Cli.CommandLine commandLine = Cli.CommandLine("cvm-run", "run a CVM container", "1.0.0")
+        Cli.Option help = Cli.Option()
+        help.longName = "help"
+        help.name = "help"
+        help.action = Cli.Action().HELP
+        commandLine.addOption(help)
+        commandLine.addOption(numberOption("max-program-bytes", "max-program-bytes", "program byte limit"))
+        commandLine.addOption(numberOption("max-instructions", "max-instructions", "instruction limit"))
+        commandLine.addOption(numberOption("max-stack-values", "max-stack-values", "stack value limit"))
+        commandLine.addOption(numberOption("max-call-depth", "max-call-depth", "call depth limit"))
+        commandLine.addOption(numberOption("max-heap-bytes", "max-heap-bytes", "heap byte limit"))
+        commandLine.addOption(numberOption("max-open-files", "max-open-files", "open file limit"))
+        Cli.Option noStdin = Cli.Option()
+        noStdin.longName = "no-stdin"
+        noStdin.name = "no-stdin"
+        noStdin.description = "disable guest stdin"
+        commandLine.addOption(noStdin)
+        Cli.Option noStdout = Cli.Option()
+        noStdout.longName = "no-stdout"
+        noStdout.name = "no-stdout"
+        noStdout.description = "disable guest stdout"
+        commandLine.addOption(noStdout)
+        Cli.Option noFiles = Cli.Option()
+        noFiles.longName = "no-files"
+        noFiles.name = "no-files"
+        noFiles.description = "disable guest filesystem"
+        commandLine.addOption(noFiles)
+        Cli.Positional input = Cli.Positional()
+        input.name = "input"
+        input.description = "CVM container"
+        input.required = true
+        commandLine.addPositional(input)
+        return(commandLine)
+    }
+
+    int64 applyLimit(Cli.CommandLine commandLine, String name, int64 maximum, bool allowZero, int64 current) {
+        if (commandLine.wasProvided(name) == false) {
+            return(current)
         }
-        if (input.equals("")) {
+        int64 value = parseLimit(commandLine.value(name), maximum, allowZero)
+        if (value < 0) {
+            return(-1)
+        }
+        return(value)
+    }
+
+    int64 run() {
+        Cli.CommandLine commandLine = parser()
+        try {
+            commandLine.parseArgv()
+        } except() {
             usageError()
             return(2)
         }
+        if (commandLine.currentAction() == Cli.Action().HELP) {
+            Sys.StandardIO().writeLine(usage())
+            return(0)
+        }
+        if (commandLine.allPositionalValues().length != 1) {
+            usageError()
+            return(2)
+        }
+
+        VM.Limits defaults = VM.Limits()
+        int64 programBytes = applyLimit(commandLine, "max-program-bytes",
+            VM.Limits.MAX_PROGRAM_BYTES, false, defaults.programBytes())
+        int64 instructions = applyLimit(commandLine, "max-instructions",
+            VM.Limits.MAX_INSTRUCTIONS, false, defaults.instructions())
+        int64 stackValues = applyLimit(commandLine, "max-stack-values",
+            VM.Limits.MAX_STACK_VALUES, false, defaults.stackValues())
+        int64 callDepth = applyLimit(commandLine, "max-call-depth",
+            VM.Limits.MAX_CALL_DEPTH, false, defaults.callDepth())
+        int64 heapBytes = applyLimit(commandLine, "max-heap-bytes",
+            VM.Limits.MAX_HEAP_BYTES, true, defaults.heapBytes())
+        VM.Capabilities defaultCapabilities = VM.Capabilities()
+        int64 maxOpenFiles = applyLimit(commandLine, "max-open-files",
+            VM.Capabilities.MAX_OPEN_FILES, true, defaultCapabilities.maxOpenFiles())
+        if (programBytes < 0 or instructions < 0 or stackValues < 0 or callDepth < 0 or heapBytes < 0 or maxOpenFiles < 0) {
+            usageError()
+            return(2)
+        }
+        bool stdinEnabled = defaultCapabilities.stdinEnabled()
+        bool stdoutEnabled = defaultCapabilities.stdoutEnabled()
+        bool filesEnabled = defaultCapabilities.filesEnabled()
+        if (commandLine.switchValue("no-stdin")) { stdinEnabled = false }
+        if (commandLine.switchValue("no-stdout")) { stdoutEnabled = false }
+        if (commandLine.switchValue("no-files")) { filesEnabled = false }
+        String input = commandLine.allPositionalValues()[0] as String
+
         VM.Limits limits = VM.Limits(programBytes, instructions, stackValues, callDepth, heapBytes)
         VM.Capabilities capabilities = VM.Capabilities(stdinEnabled, stdoutEnabled,
             filesEnabled, maxOpenFiles)

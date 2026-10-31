@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Route `cvm-as` and `cvm-run` argv parsing through the SDK `cli` 0.1.0 package
+  while preserving existing usage text, exit codes, and option names.
 - Read container and assembly bytes with `text[index]`. After cparsegen runs,
   the build rewrites a generated scanner that still calls `String.slice` or
   `String.byteAt`. Half-open spans stay empty. A scanner that already uses
